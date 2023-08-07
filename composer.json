@@ -1,0 +1,28 @@
+{
+    "name": "ajur-media/fsnews.media",
+    "description": "FSNews Engine Media common class",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "AJUR\\FSNews\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Karel Wintersky",
+            "email": "karel.wintersky@yandex.ru"
+        }
+    ],
+    "require": {
+        "ext-json": "*",
+        "ext-fileinfo": "*",
+        "psr/log": "^1.1",
+        "karelwintersky/arris": "^2.4",
+        "karelwintersky/arris.toolkit.mimetypes": "^1.0",
+        "ajur-media/php_gdwrapper": "^1.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8 || ^5.7 || ^6.5"
+    }
+}
