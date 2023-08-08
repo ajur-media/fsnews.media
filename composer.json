@@ -18,7 +18,7 @@
         "ext-json": "*",
         "ext-fileinfo": "*",
         "psr/log": "^1.1",
-        "karelwintersky/arris": "^2.4",
+        "karelwintersky/arris": "^2.7",
         "karelwintersky/arris.toolkit.mimetypes": "^1.0",
         "ajur-media/php_gdwrapper": "^1.2"
     },

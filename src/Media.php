@@ -56,19 +56,16 @@ class Media implements MediaInterface
         self::$options['exec.ffmpeg'] = $options['exec.ffmpeg'] ?? 'ffmpeg';
         self::$options['domain.storage'] = $options['domains.storage'] ?? ''; //@required
 
-
         self::$logger = is_null($logger) ? new NullLogger() : $logger;
     }
 
     /**
      * upload & create thumbnails for Embedded Photo
      *
-     * @todo: return Result<radix, type>
-     *
      * @param string|Path $fn_source
      * @param $watermark_corner
      * @param LoggerInterface $logger
-     * @return string
+     * @return Result
      * @throws \Exception
      */
     public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger)
@@ -79,13 +76,13 @@ class Media implements MediaInterface
 
         self::validatePath($path);
 
-        $resource_name = self::getRandomFilename(20);
+        $radix = self::getRandomFilename(20);
 
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
 
-        $radix = "{$resource_name}.{$source_extension}";
+        $original_filename = "{$radix}.{$source_extension}";
 
-        $logger->debug("[PHOTO] Загруженное изображение будет иметь корень имени:", [ $radix ]);
+        $logger->debug("[PHOTO] Загруженное изображение будет иметь корень имени:", [ $original_filename ]);
 
         $available_photo_sizes = self::$convert_sizes['photos'];
 
@@ -96,11 +93,11 @@ class Media implements MediaInterface
             $quality = $params['quality'];
             $prefix = $params['prefix'];
 
-            $fn_target = Path::create($path)->joinName("{$prefix}{$radix}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
+            $fn_target = Path::create($path)->joinName("{$prefix}{$original_filename}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
 
             if (!call_user_func_array($method, [ $fn_source, $fn_target, $max_width, $max_height, $quality ])) {
                 foreach ($available_photo_sizes as $inner_size => $inner_params) {
-                    @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$radix}"));
+                    @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$original_filename}"));
                 }
                 $logger->error('[PHOTO] Не удалось сгенерировать превью с параметрами: ', [ $method, $max_width, $max_height, $quality, $fn_target ]);
                 throw new RuntimeException("Ошибка конвертации загруженного изображения в размер [$prefix]", -1);
@@ -121,13 +118,13 @@ class Media implements MediaInterface
         }
 
         // сохраняем оригинал (в конфиг?)
-        $fn_origin = Path::create($path)->joinName("origin_{$radix}")->toString();
+        $fn_origin = Path::create($path)->joinName("origin_{$original_filename}")->toString();
         if (!move_uploaded_file($fn_source, $fn_origin)) {
             $logger->error("[PHOTO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", [ $fn_source, $fn_origin ]);
 
             // но тогда нужно удалить и все превьюшки
             foreach ($available_photo_sizes as $inner_size => $inner_params) {
-                @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$radix}"));
+                @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$original_filename}"));
             }
 
             throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", -1);
@@ -135,7 +132,12 @@ class Media implements MediaInterface
 
         $logger->debug("[PHOTO] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
 
-        return $radix;
+        return new Result([
+            'filename'  =>  $fn_origin,
+            'radix'     =>  $radix,
+            'status'    =>  'pending',
+            'type'      =>  self::MEDIA_TYPE_AUDIO
+        ]);
     }
 
     /**
@@ -145,7 +147,7 @@ class Media implements MediaInterface
      *
      * @param $fn_source
      * @param LoggerInterface $logger
-     * @return string
+     * @return Result<string filename, string radix, string status, string type>
      * @throws \Exception
      */
     public static function uploadAudio($fn_source, LoggerInterface $logger)
@@ -156,30 +158,35 @@ class Media implements MediaInterface
 
         self::validatePath($path);
 
-        $resource_name = self::getRandomFilename(20);
+        $radix = self::getRandomFilename(20);
 
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
 
-        $radix = "{$resource_name}.{$source_extension}";
+        $filename_original = "{$radix}.{$source_extension}";
 
-        $logger->debug("[AUDIO] Загруженный аудиофайл будет иметь корень имени:", [ $radix ]);
+        $logger->debug("[AUDIO] Загруженный аудиофайл будет иметь корень имени:", [ $filename_original ]);
 
         $prefix = current(self::$convert_sizes['audios'])['prefix'];
 
         // ничего не конвертируем, этим займется крон-скрипт
-        $fn_target = Path::create($path)->joinName("{$prefix}{$radix}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
+        $fn_origin = Path::create($path)->joinName("{$prefix}{$filename_original}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
 
-        if (!move_uploaded_file($fn_source, $fn_target)) {
-            $logger->error("[AUDIO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", [ $fn_source, $fn_target ]);
-            throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", -1);
+        if (!move_uploaded_file($fn_source, $fn_origin)) {
+            $logger->error("[AUDIO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", [ $fn_source, $fn_origin ]);
+            throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", -1);
         }
 
-        $logger->debug("[AUDIO] Загруженный файл {$fn_source} сохранён в файл {$fn_target}: ", [ $fn_source, $fn_target ]);
+        $logger->debug("[AUDIO] Загруженный файл {$fn_source} сохранён в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
 
-        $logger->debug('[AUDIO] Stored as', [ $fn_target ]);
-        $logger->debug('[AUDIO] Returned', [ $fn_target ]);
+        $logger->debug('[AUDIO] Stored as', [ $fn_origin ]);
+        $logger->debug('[AUDIO] Returned', [ $fn_origin ]);
 
-        return $radix;
+        return new Result([
+            'filename'  =>  $fn_origin,
+            'radix'     =>  $radix,
+            'status'    =>  'pending',
+            'type'      =>  self::MEDIA_TYPE_AUDIO
+        ]);
     }
 
     /**
@@ -189,7 +196,7 @@ class Media implements MediaInterface
      *
      * @param $fn_source
      * @param LoggerInterface $logger
-     * @return void
+     * @return Result
      * @throws \Exception
      */
     public static function uploadAnyFile($fn_source, LoggerInterface $logger)
@@ -200,28 +207,36 @@ class Media implements MediaInterface
 
         self::validatePath($path);
 
-        $resource_name = self::getRandomFilename(20);
+        $radix = self::getRandomFilename(20);
 
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
 
-        $radix = "{$resource_name}.{$source_extension}";
+        $filename_origin = "{$radix}.{$source_extension}";
 
-        $logger->debug("[FILE] Загруженный аудиофайл будет иметь корень имени:", [ $radix ]);
+        $logger->debug("[FILE] Загруженный аудиофайл будет иметь корень имени:", [ $filename_origin ]);
 
         $prefix = current(self::$convert_sizes['audios'])['prefix'];
 
         // ничего не конвертируем, этим займется крон-скрипт
-        $fn_target = Path::create($path)->joinName("{$prefix}{$radix}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
+        $fn_target = Path::create($path)->joinName("{$prefix}{$filename_origin}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
 
 
         if (!move_uploaded_file($fn_source, $fn_target)) {
             $logger->error("[FILE] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", [ $fn_source, $fn_target ]);
             throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", -1);
         }
+
         $logger->debug("[FILE] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_target}: ", [ $fn_source, $fn_target ]);
 
         $logger->debug('[FILE] Stored as', [ $fn_target ]);
         $logger->debug('[FILE] Returned', [ $fn_target]);
+
+        return new Result([
+            'filename'  =>  $fn_target,
+            'radix'     =>  $radix,
+            'status'    =>  'ready',
+            'type'      =>  self::MEDIA_TYPE_FILE
+        ]);
     }
 
     /**
@@ -336,6 +351,7 @@ class Media implements MediaInterface
 
         return new Result([
             'filename'  =>  "{$radix}.{$source_extension}",
+            'radix'     =>  $radix,
             'bitrate'   =>  $video_bitrate,
             'duration'  =>  $video_duration,
             'status'    =>  'pending',
