@@ -2,56 +2,13 @@
 
 namespace AJUR\FSNews\Helpers;
 
+use AJUR\FSNews\Media;
 use AJUR\FSNews\MediaInterface;
 use AJUR\Wrappers\GDWrapper;
-use Arris\Path;
 use Arris\Toolkit\MimeTypes;
 
 trait MediaHelpers
 {
-    /**
-     * Возвращает абсолютный путь к ресурсу относительно корня FS.
-     * Заканчивается на / или является экземпляром Path
-     *
-     * @param $type
-     * @param string $creation_date
-     * @param bool $stringify_path
-     * @return Path|string
-     */
-    public static function getAbsoluteResourcePath($type = 'photos', $creation_date = 'now', bool $stringify_path = true)
-    {
-        $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
-
-        $path = Path::create( self::$options['storage.root'])
-            ->join( self::getContentDir($type) )
-            ->join( date('Y', $creation_date) )
-            ->join( date('m', $creation_date) )
-            ->setOptions(['isAbsolute'=>true]);
-
-        return $stringify_path ? $path->toString(true) : $path;
-    }
-
-    /**
-     * Возвращает путь к ресурсу относительно корня STORAGE (и только путь). Начинается с /, заканчивается на /
-     *
-     * Для определения каталога к типу контента используется mapping
-     *
-     * @param $type
-     * @param $creation_date
-     * @param $stringify_path
-     * @return Path|string
-     */
-    public static function getRelativeResourcePath($type = 'photos', $creation_date = 'now', $stringify_path = true)
-    {
-        $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
-
-        $path = Path::create( self::getContentDir($type), true )
-            ->join( date('Y', $creation_date) )
-            ->join( date('m', $creation_date) );
-
-        return $stringify_path ? $path->toString(true) : $path;
-    }
-
     /**
      * Возвращает абсолютный URL к ресурсу
      *
@@ -69,24 +26,7 @@ trait MediaHelpers
 
     }
 
-    /**
-     * Проверяет существование пути
-     *
-     * @param $path
-     * @return bool
-     */
-    public static function validatePath($path)
-    {
-        if ($path instanceof Path) {
-            $path = $path->toString();
-        }
 
-        if (!is_dir($path) && ( !mkdir($path, 0777, true) && !is_dir($path)) ) {
-            throw new \RuntimeException( sprintf( 'Directory "%s" can\'t be created', $path ) );
-        }
-
-        return true;
-    }
 
     /**
      * @throws \Exception
@@ -120,9 +60,9 @@ trait MediaHelpers
     {
         MediaHelpers::validatePath($path); // проверяем существование пути и создаем при необходимости
         do {
-            $newfname = MediaHelpers::getRandomFilename( $length ) . $extension;
-        } while (is_file( "{$path}/{$newfname}" ));
-        return $newfname;
+            $new_filename = MediaHelpers::getRandomFilename( $length ) . $extension;
+        } while (is_file( "{$path}/{$new_filename}" ));
+        return $new_filename;
     }
 
     /**
@@ -147,7 +87,7 @@ trait MediaHelpers
         $vfscale = "-vf \"scale=iw*min({$w}/iw\,{$h}/ih):ih*min({$w}/iw\,{$h}/ih), pad={$w}:{$h}:({$w}-iw*min({$w}/iw\,{$h}/ih))/2:({$h}-ih*min({$w}/iw\,{$h}/ih))/2\" ";
 
         $cmd = [
-            'bin'       =>  self::$paths['exec.ffmpeg'],
+            'bin'       =>  Media::$options['exec.ffmpeg'],
                             '-hide_banner',
                             '-y',
             'source'    =>  "-i {$source}",
@@ -180,11 +120,11 @@ trait MediaHelpers
     /**
      * @param $source
      * @param $target
-     * @param $params
+     * @param array $params
      * @param $logger
      * @return \AJUR\Wrappers\GDImageInfo|false
      */
-    public static function resizePreview($source, $target, $params = [], $logger = null)
+    public static function resizePreview($source, $target, array $params = [], $logger = null)
     {
         if (empty($params)) {
             return false;

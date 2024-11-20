@@ -2,6 +2,8 @@
 
 namespace AJUR\FSNews\Constants;
 
+use Arris\Core\Dot;
+
 trait ConvertSizes
 {
     /**
@@ -11,7 +13,7 @@ trait ConvertSizes
      *
      * @var array
      */
-    public static $convert_sizes = [
+    public static array $convert_sizes = [
         /*
          * Используются размеры: 100x100, 440x300, 630x465, 1280x1024
          */
@@ -162,5 +164,14 @@ trait ConvertSizes
             ],
         ]
     ];
+
+    public static function getConvertSizes($path = null)
+    {
+        $repository = new Dot(self::$convert_sizes);
+
+        return $repository->get($path);
+    }
+
+
 
 }

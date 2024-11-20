@@ -3,7 +3,6 @@
 namespace AJUR\FSNews;
 
 use Arris\Entity\Result;
-use Arris\Path;
 use Psr\Log\LoggerInterface;
 
 interface MediaInterface
@@ -35,15 +34,6 @@ interface MediaInterface
      */
     public static function init(array $options = [], array $content_dirs = [], LoggerInterface $logger = null);
 
-    /**
-     * upload & create thumbnails for Embedded Photo
-     *
-     * @param string|Path $fn_source
-     * @param $watermark_corner
-     * @param LoggerInterface $logger
-     * @return Result
-     * @throws \Exception
-     */
     public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger);
 
     /**
@@ -54,7 +44,7 @@ interface MediaInterface
      * @return Result<string filename, string radix, string status, string type>
      * @throws \Exception
      */
-    public static function uploadAudio($fn_source, LoggerInterface $logger);
+    public static function uploadAudio($fn_source, LoggerInterface $logger = null);
 
     /**
      * Upload Abstract File
@@ -64,7 +54,7 @@ interface MediaInterface
      * @return Result
      * @throws \Exception
      */
-    public static function uploadAnyFile($fn_source, LoggerInterface $logger);
+    public static function uploadAnyFile($fn_source, LoggerInterface $logger = null);
 
     /**
      * Загружает видео и строит превью
@@ -77,16 +67,10 @@ interface MediaInterface
      * @return Result
      * @throws \Exception
      */
-    public static function uploadVideo($fn_source, LoggerInterface $logger);
+    public static function uploadVideo($fn_source, LoggerInterface $logger = null);
 
-    /**
-     * Загружает с ютуба название видео. Точно работает с видео, с shorts не проверялось.
-     *
-     * @param string $video_id
-     * @param string $default
-     * @return string
-     */
-    public static function getYoutubeVideoTitle(string $video_id, string $default = ''):string;
+
+    public static function getYoutubeVideoTitle(string $video_id, string $default = ''):Result;
 
     /**
      * Удаляет тайтловое изображение и все его превьюшки
@@ -96,18 +80,8 @@ interface MediaInterface
      * @param LoggerInterface $logger
      * @return int
      */
-    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger):int;
+    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger = null):int;
 
-    /**
-     * Для указанного медиа-файла генерирует новое имя для превью и прочего
-     *
-     * @param $row
-     * @param $target_is_mobile - замена строки `LegacyTemplate::$use_mobile_template` или `$CONFIG['AREA'] === "m"`
-     * @param $is_report
-     * @param $prepend_domain
-     * @param $domain_prefix - домен - `config('domains.storage.default')` или `global $CONFIG['domains']['storage']['default']`
-     *                          заменено на self::$options['domain.storage']
-     * @return mixed
-     */
-    public static function prepareMediaProperties($row, $target_is_mobile = false, $is_report = false, $prepend_domain = false, $domain_prefix = '');
+
+    public static function prepareMediaProperties(array $row = [], bool $is_report = false, bool $prepend_domain = false, bool $target_is_mobile = false, string $domain_prefix = ''):array;
 }

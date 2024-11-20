@@ -9,7 +9,7 @@ trait AllowedMimeTypes
      *
      * @var string[]
      */
-    public static $allowed_mime_types = [
+    public static array $allowed_mime_types = [
         'audio/',
         'image/',
         'video/',

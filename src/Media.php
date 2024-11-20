@@ -22,12 +22,12 @@ class Media implements MediaInterface
     /**
      * @var LoggerInterface
      */
-    protected static $logger;
+    protected static LoggerInterface $logger;
 
     /**
      * @var array
      */
-    private static $options = [];
+    private static array $options = [];
 
     public static function init(array $options = [], array $content_dirs = [], LoggerInterface $logger = null)
     {
@@ -46,9 +46,25 @@ class Media implements MediaInterface
         self::$logger = is_null($logger) ? new NullLogger() : $logger;
     }
 
-    public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger)
+    /**
+     * upload & create thumbnails for Embedded Photo
+     *
+     * @param string|Path $fn_source
+     * @param $watermark_corner
+     * @param LoggerInterface|null $logger
+     * @return Result
+     * @throws \Exception
+     */
+    public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger = null): Result
     {
+        $logger = $logger ?? self::$logger;
+
         $logger->debug('[PHOTO] Обрабатываем как фото (image/*)');
+
+        if (empty($fn_source) || !is_file($fn_source)) {
+            $logger->error('Invalid source file for image upload.', ['fn_source' => $fn_source]);
+            return new Result(false, 'Invalid source file.');
+        }
 
         $path = self::getAbsoluteResourcePath('photos', 'now');
 
@@ -62,7 +78,7 @@ class Media implements MediaInterface
 
         $logger->debug("[PHOTO] Загруженное изображение будет иметь корень имени:", [ $original_filename ]);
 
-        $available_photo_sizes = self::$convert_sizes['photos'];
+        $available_photo_sizes = self::getConvertSizes('photos');
 
         foreach ($available_photo_sizes as $size => $params) {
             $method = $params['method'];
@@ -110,7 +126,7 @@ class Media implements MediaInterface
 
         $logger->debug("[PHOTO] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
 
-        return new Result([
+        return (new Result())->setData([
             'filename'  =>  $fn_origin,
             'radix'     =>  $radix,
             'status'    =>  'pending',
@@ -118,8 +134,10 @@ class Media implements MediaInterface
         ]);
     }
 
-    public static function uploadAudio($fn_source, LoggerInterface $logger)
+    public static function uploadAudio($fn_source, LoggerInterface $logger = null)
     {
+        $logger = $logger ?? self::$logger;
+
         $logger->debug('[AUDIO] Обрабатываем как аудио (audio/*)');
 
         $path = self::getAbsoluteResourcePath('audios', 'now');
@@ -149,7 +167,7 @@ class Media implements MediaInterface
         $logger->debug('[AUDIO] Stored as', [ $fn_origin ]);
         $logger->debug('[AUDIO] Returned', [ $fn_origin ]);
 
-        return new Result([
+        return (new Result())->setData([
             'filename'  =>  $fn_origin,
             'radix'     =>  $radix,
             'status'    =>  'pending',
@@ -157,8 +175,10 @@ class Media implements MediaInterface
         ]);
     }
 
-    public static function uploadAnyFile($fn_source, LoggerInterface $logger)
+    public static function uploadAnyFile($fn_source, LoggerInterface $logger = null)
     {
+        $logger = $logger ?? self::$logger;
+
         $logger->debug('[FILE] Обрабатываем как аудио (audio/*)');
 
         $path = self::getAbsoluteResourcePath('audios', 'now');
@@ -189,7 +209,7 @@ class Media implements MediaInterface
         $logger->debug('[FILE] Stored as', [ $fn_target ]);
         $logger->debug('[FILE] Returned', [ $fn_target]);
 
-        return new Result([
+        return (new Result())->setData([
             'filename'  =>  $fn_target,
             'radix'     =>  $radix,
             'status'    =>  'ready',
@@ -197,8 +217,10 @@ class Media implements MediaInterface
         ]);
     }
 
-    public static function uploadVideo($fn_source, LoggerInterface $logger)
+    public static function uploadVideo($fn_source, LoggerInterface $logger = null)
     {
+        $logger = $logger ?? self::$logger;
+
         $logger->debug('[VIDEO] Обрабатываем как видео (video/*)');
 
         $ffprobe = self::$options['exec.ffprobe'];
@@ -296,7 +318,7 @@ class Media implements MediaInterface
 
         $logger->debug('[VIDEO] Превью сделаны, файл видео сохранён');
 
-        return new Result([
+        return (new Result())->setData([
             'filename'  =>  "{$radix}.{$source_extension}",
             'radix'     =>  $radix,
             'bitrate'   =>  $video_bitrate,
@@ -306,33 +328,52 @@ class Media implements MediaInterface
         ]);
     } // uploadVideo
 
-    public static function getYoutubeVideoTitle(string $video_id, string $default = ''):string
+    /**
+     * Загружает с ютуба название видео. Точно работает с видео, с shorts не проверялось.
+     *
+     * @param string $video_id
+     * @param string $default
+     * @return Result
+     */
+    public static function getYoutubeVideoTitle(string $video_id, string $default = ''):Result
     {
+        $r = new Result();
+        $r->title = $default;
+
         //@todo: curl?
         $video_info = @file_get_contents("http://youtube.com/get_video_info?video_id={$video_id}");
 
         if (!$video_info) {
-            return $default;
+            $r->error("Invalid [http://youtube.com/get_video_info] response");
+            return $r;
         }
 
         parse_str($video_info, $vi_array);
+        $r->video_info = $video_info;
 
         if (!array_key_exists('player_response', $vi_array)) {
-            return $default;
+            $r->error("No [player_response] in youtube answer");
+            return $r;
         }
 
         $video_info = json_decode($vi_array['player_response']);
+        $r->player_response = $vi_array['player_response'];
 
         if (is_null($video_info)) {
-            return $default;
+            $r->error("Can't decode player_response from youtube answer");
+            return $r;
         }
 
-        return $video_info->videoDetails->title ?: $default;
+        $r->title = $video_info->videoDetails->title ?: $default;
+
+        return $r;
     }
 
-    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger):int
+    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger = null):int
     {
-        $path = MediaHelpers::getAbsoluteResourcePath('titles', $cdate, false);
+        $logger = $logger ?? self::$logger;
+
+        $path = self::getAbsoluteResourcePath('titles', $cdate, false);
 
         $prefixes = array_map(static function($v) {
             return $v['prefix'];
@@ -349,8 +390,29 @@ class Media implements MediaInterface
         return $deleted_count;
     }
 
-    public static function prepareMediaProperties($row, $target_is_mobile = false, $is_report = false, $prepend_domain = false, $domain_prefix = '')
+    /**
+     * Для указанного медиа-файла генерирует новое имя для превью и прочего
+     * Используется: сайт
+     *
+     * @param array $row
+     * @param bool $is_report - Является ли медиаресурс частью фоторепортажа (FALSE)
+     * @param bool $prepend_domain - Добавлять ли домен перед путём к ресурсу (FALSE)
+     * @param bool $target_is_mobile - Просматривают ли ресурс с мобильного устройства (FALSE) - замена строки `LegacyTemplate::$use_mobile_template` или `$CONFIG['AREA'] === "m"`
+     * @param string $domain_prefix - Подставляемый домен (передается через $options['domain.storage']), `config('domains.storage.default')` или `global $CONFIG['domains']['storage']['default']`
+     *
+     * @return array
+     */
+    public static function prepareMediaProperties(
+        array $row = [],
+        bool $is_report = false,
+        bool $prepend_domain = false,
+        bool $target_is_mobile = false,
+        string $domain_prefix = ''):array
     {
+        if (empty($row)) {
+            return [];
+        }
+
         if (empty($domain_prefix)) {
             $domain_prefix = self::$options['domain.storage.default'];
         }
@@ -431,9 +493,6 @@ class Media implements MediaInterface
         return $row;
     }
 
-    /* == HELPERS == */
-
-
-
-
 }
+
+# -end- #
