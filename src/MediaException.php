@@ -2,4 +2,6 @@
 
 namespace AJUR\FSNews;
 
-class MediaException extends \RuntimeException { }
+use RuntimeException;
+
+class MediaException extends RuntimeException { }

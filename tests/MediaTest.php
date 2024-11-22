@@ -42,7 +42,7 @@ class MediaTest extends TestCase
      */
     public function testDeserialize1()
     {
-        $this->assertEquals(['a' => 1 ], \AJUR\FSNews\Helpers\MediaHelpers::deserialize('{"a": 1}', []));
+        $this->assertEquals(['a' => 1 ], Media\Helpers\MediaHelpers::deserialize('{"a": 1}', []));
     }
 
 }

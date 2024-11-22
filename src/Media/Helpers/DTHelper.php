@@ -1,6 +1,6 @@
 <?php
 
-namespace AJUR\FSNews\Helpers;
+namespace AJUR\FSNews\Media\Helpers;
 
 class DTHelper
 {

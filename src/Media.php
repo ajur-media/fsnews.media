@@ -2,15 +2,16 @@
 
 namespace AJUR\FSNews;
 
-use AJUR\FSNews\Constants\AllowedMimeTypes;
-use AJUR\FSNews\Constants\ContentDirs;
-use AJUR\FSNews\Constants\ConvertSizes;
-use AJUR\FSNews\Helpers\DTHelper;
-use AJUR\FSNews\Helpers\MediaHelpers;
+use AJUR\FSNews\Media\Constants\AllowedMimeTypes;
+use AJUR\FSNews\Media\Constants\ContentDirs;
+use AJUR\FSNews\Media\Constants\ConvertSizes;
+use AJUR\FSNews\Media\Helpers\DTHelper;
+use AJUR\FSNews\Media\Helpers\MediaHelpers;
 use AJUR\Wrappers\GDWrapper;
 use Arris\Entity\Result;
 use Arris\Path;
 use Arris\Toolkit\MimeTypes;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use RuntimeException;
@@ -53,11 +54,11 @@ class Media implements MediaInterface
      * @param $watermark_corner
      * @param LoggerInterface|null $logger
      * @return Result
-     * @throws \Exception
+     * @throws Exception
      */
-    public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger = null): Result
+    public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger = null):Result
     {
-        $logger = $logger ?? self::$logger;
+        $logger = $logger ?? self::$logger ?? new NullLogger();
 
         $logger->debug('[PHOTO] Обрабатываем как фото (image/*)');
 
@@ -66,17 +67,17 @@ class Media implements MediaInterface
             return new Result(false, 'Invalid source file.');
         }
 
+        $result = new Result();
+        $result->setData('thumbnails', []);
+
         $path = self::getAbsoluteResourcePath('photos', 'now');
-
         self::validatePath($path);
-
         $radix = self::getRandomFilename(20);
-
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
 
-        $original_filename = "{$radix}.{$source_extension}";
+        $resource_filename = "{$radix}.{$source_extension}";
 
-        $logger->debug("[PHOTO] Загруженное изображение будет иметь корень имени:", [ $original_filename ]);
+        $logger->debug("[PHOTO] Загруженное изображение будет иметь корень имени:", [ $resource_filename ]);
 
         $available_photo_sizes = self::getConvertSizes('photos');
 
@@ -87,17 +88,18 @@ class Media implements MediaInterface
             $quality = $params['quality'];
             $prefix = $params['prefix'];
 
-            $fn_target = Path::create($path)->joinName("{$prefix}{$original_filename}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
+            $fn_target = Path::create($path)->joinName("{$prefix}{$resource_filename}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
 
             if (!call_user_func_array($method, [ $fn_source, $fn_target, $max_width, $max_height, $quality ])) {
                 foreach ($available_photo_sizes as $inner_size => $inner_params) {
-                    @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$original_filename}"));
+                    @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$resource_filename}"));
                 }
                 $logger->error('[PHOTO] Не удалось сгенерировать превью с параметрами: ', [ $method, $max_width, $max_height, $quality, $fn_target ]);
                 throw new RuntimeException("Ошибка конвертации загруженного изображения в размер [$prefix]", -1);
             }
-
             $logger->debug('[PHOTO] Сгенерировано превью: ', [ $method, $max_width, $max_height, $quality, $fn_target ]);
+
+            $result->addData('thumbnails', [[ $fn_target, $method, $max_width, $max_height, $quality ]]);
 
             if (!is_null($watermark_corner) && isset($params['wmFile']) && $watermark_corner > 0) {
                 $fn_watermark = Path::create( self::$options['watermarks'] )->joinName($params['wmFile'])->toString();
@@ -112,13 +114,14 @@ class Media implements MediaInterface
         }
 
         // сохраняем оригинал (в конфиг?)
-        $fn_origin = Path::create($path)->joinName("origin_{$original_filename}")->toString();
+        $prefix_origin = "origin_";
+        $fn_origin = Path::create($path)->joinName("{$prefix_origin}{$resource_filename}")->toString();
         if (!move_uploaded_file($fn_source, $fn_origin)) {
             $logger->error("[PHOTO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", [ $fn_source, $fn_origin ]);
 
             // но тогда нужно удалить и все превьюшки
             foreach ($available_photo_sizes as $inner_size => $inner_params) {
-                @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$original_filename}"));
+                @unlink( Path::create($path)->joinName("{$inner_params['prefix']}{$resource_filename}"));
             }
 
             throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", -1);
@@ -126,24 +129,39 @@ class Media implements MediaInterface
 
         $logger->debug("[PHOTO] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
 
-        return (new Result())->setData([
-            'filename'  =>  $fn_origin,
-            'radix'     =>  $radix,
-            'status'    =>  'pending',
-            'type'      =>  self::MEDIA_TYPE_AUDIO
+        $result->setData([
+            'fn_resource'   => "{$radix}.{$source_extension}",
+            'radix'         =>  $radix,
+            'extension'     =>  $source_extension,
+            'fn_origin'     =>  $fn_origin,
+            'status'        =>  'pending',
+            'type'          =>  self::MEDIA_TYPE_PHOTOS
         ]);
+
+        return $result;
     }
 
+    /**
+     * Upload Audio
+     *
+     * @param $fn_source
+     * @param LoggerInterface $logger
+     * @return Result<string filename, string radix, string status, string type>
+     * @throws Exception
+     */
     public static function uploadAudio($fn_source, LoggerInterface $logger = null)
     {
-        $logger = $logger ?? self::$logger;
+        $logger = $logger ?? self::$logger ?? new NullLogger();
 
         $logger->debug('[AUDIO] Обрабатываем как аудио (audio/*)');
 
+        if (empty($fn_source) || !is_file($fn_source)) {
+            $logger->error('Invalid source file for image upload.', ['fn_source' => $fn_source]);
+            return new Result(false, 'Invalid source file.');
+        }
+
         $path = self::getAbsoluteResourcePath('audios', 'now');
-
         self::validatePath($path);
-
         $radix = self::getRandomFilename(20);
 
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
@@ -152,7 +170,8 @@ class Media implements MediaInterface
 
         $logger->debug("[AUDIO] Загруженный аудиофайл будет иметь корень имени:", [ $filename_original ]);
 
-        $prefix = current(self::$convert_sizes['audios'])['prefix'];
+        // $prefix = current(self::$convert_sizes['audios'])['prefix'];
+        $prefix = ConvertSizes::getConvertSizes('audios._.prefix');
 
         // ничего не конвертируем, этим займется крон-скрипт
         $fn_origin = Path::create($path)->joinName("{$prefix}{$filename_original}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
@@ -170,34 +189,39 @@ class Media implements MediaInterface
         return (new Result())->setData([
             'filename'  =>  $fn_origin,
             'radix'     =>  $radix,
+            'extension' =>  $source_extension,
             'status'    =>  'pending',
             'type'      =>  self::MEDIA_TYPE_AUDIO
         ]);
     }
 
-    public static function uploadAnyFile($fn_source, LoggerInterface $logger = null)
+    /**
+     * Upload Abstract File
+     *
+     * @param $fn_source
+     * @param LoggerInterface|null $logger
+     * @return Result
+     * @throws Exception
+     */
+    public static function uploadAnyFile($fn_source, LoggerInterface $logger = null):Result
     {
-        $logger = $logger ?? self::$logger;
+        $logger = $logger ?? self::$logger ?? new NullLogger();
 
         $logger->debug('[FILE] Обрабатываем как аудио (audio/*)');
 
         $path = self::getAbsoluteResourcePath('audios', 'now');
-
         self::validatePath($path);
-
         $radix = self::getRandomFilename(20);
-
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
-
         $filename_origin = "{$radix}.{$source_extension}";
 
         $logger->debug("[FILE] Загруженный аудиофайл будет иметь корень имени:", [ $filename_origin ]);
 
-        $prefix = current(self::$convert_sizes['audios'])['prefix'];
+        // $prefix = current(self::$convert_sizes['files'])['prefix'];
+        $prefix = ConvertSizes::getConvertSizes('files._.prefix');
 
-        // ничего не конвертируем, этим займется крон-скрипт
+        // никаких действий над файлом не совершается
         $fn_target = Path::create($path)->joinName("{$prefix}{$filename_origin}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
-
 
         if (!move_uploaded_file($fn_source, $fn_target)) {
             $logger->error("[FILE] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", [ $fn_source, $fn_target ]);
@@ -217,9 +241,20 @@ class Media implements MediaInterface
         ]);
     }
 
-    public static function uploadVideo($fn_source, LoggerInterface $logger = null)
+    /**
+     * Загружает видео и строит превью
+     *
+     * Можно использовать https://packagist.org/packages/php-ffmpeg/php-ffmpeg,
+     * но я предпочел нативный метод, через прямые вызовы shell_exec()
+     *
+     * @param $fn_source
+     * @param LoggerInterface|null $logger
+     * @return Result
+     * @throws Exception
+     */
+    public static function uploadVideo($fn_source, LoggerInterface $logger = null): Result
     {
-        $logger = $logger ?? self::$logger;
+        $logger = $logger ?? self::$logger ?? new NullLogger();
 
         $logger->debug('[VIDEO] Обрабатываем как видео (video/*)');
 
@@ -264,11 +299,8 @@ class Media implements MediaInterface
         // готовим имя основного файла
 
         $path = self::getAbsoluteResourcePath('videos', 'now');
-
         self::validatePath($path);
-
         $radix = self::getRandomFilename(20);
-
         $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
 
         $fn_original = Path::create( $path )->joinName("{$radix}.{$source_extension}")->toString();
@@ -329,49 +361,18 @@ class Media implements MediaInterface
     } // uploadVideo
 
     /**
-     * Загружает с ютуба название видео. Точно работает с видео, с shorts не проверялось.
+     * Удаляет тайтловое изображение и все его превьюшки
      *
-     * @param string $video_id
-     * @param string $default
+     * @param $filename
+     * @param $cdate
+     * @param LoggerInterface|null $logger
      * @return Result
      */
-    public static function getYoutubeVideoTitle(string $video_id, string $default = ''):Result
+    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger = null):Result
     {
+        $logger = $logger ?? self::$logger ?? new NullLogger();
+
         $r = new Result();
-        $r->title = $default;
-
-        //@todo: curl?
-        $video_info = @file_get_contents("http://youtube.com/get_video_info?video_id={$video_id}");
-
-        if (!$video_info) {
-            $r->error("Invalid [http://youtube.com/get_video_info] response");
-            return $r;
-        }
-
-        parse_str($video_info, $vi_array);
-        $r->video_info = $video_info;
-
-        if (!array_key_exists('player_response', $vi_array)) {
-            $r->error("No [player_response] in youtube answer");
-            return $r;
-        }
-
-        $video_info = json_decode($vi_array['player_response']);
-        $r->player_response = $vi_array['player_response'];
-
-        if (is_null($video_info)) {
-            $r->error("Can't decode player_response from youtube answer");
-            return $r;
-        }
-
-        $r->title = $video_info->videoDetails->title ?: $default;
-
-        return $r;
-    }
-
-    public static function unlinkStoredTitleImages($filename, $cdate, LoggerInterface $logger = null):int
-    {
-        $logger = $logger ?? self::$logger;
 
         $path = self::getAbsoluteResourcePath('titles', $cdate, false);
 
@@ -383,11 +384,19 @@ class Media implements MediaInterface
 
         foreach ($prefixes as $prefix) {
             $fn = $path->joinName($prefix . $filename)->toString();
-            $logger->debug("[unlinkStoredTitleImage] Удалятся файл:", [ $fn, @unlink($fn) ]);
+            $success = @unlink($fn);
+            $logger->debug("[unlinkStoredTitleImages] Удалятся файл:", [ $fn, $success ]);
+
+            $r->addData('list', [[
+                'file'      =>  $fn,
+                'success'   =>  $success
+            ]]);
+
             $deleted_count++;
         }
+        $r->deleted_count = $deleted_count;
 
-        return $deleted_count;
+        return $r;
     }
 
     /**
@@ -428,11 +437,14 @@ class Media implements MediaInterface
             $row['cdate_rus'] = DTHelper::convertDate($row['cdate']);
         }
 
+        // префикс идет без `_` и в /var/www/47news_v1_admin/www/frontend/js/jquery.file-manager.js он тоже без `_`
+        // (подставляется в коде)
         $row['prefix'] = $is_report ? "440x300" : "100x100";
         $row['report_prefix'] = "590x440";
 
+        // $is_report используется только на сайте
+
         if ($row['type'] === "photos") {
-            // $this->report NEVER DECLARED (в админке уж точно)
             if ($is_report) {
                 if ($target_is_mobile) {
                     $row['sizes'] = [590, 440];          // "590x440" -- mobile_report_tn
@@ -453,7 +465,8 @@ class Media implements MediaInterface
 
             $row['sizes_prev'] = [150, 100];   // "150x100"
             $row['sizes_large'] = [1280, 1024];  // "1280x1024"
-            $row['orig_file'] = "590x440_" . $row['file'];     // "590x440_"
+            // $row['orig_file'] = "590x440_" . $row['file'];     // было удалено
+            $row['orig_file'] = ConvertSizes::$convert_sizes['photos']["630x465"]['prefix'] . $row['file'];
         }
 
         if ($row['type'] === "videos") {
@@ -461,7 +474,8 @@ class Media implements MediaInterface
             $row['sizes'] = [640, 352];
             $row['sizes_thumb'] = "640x352"; // $k[2]
             $row['sizes_video'] = array(640, 352 + 25); //minWidth, minHeight
-            $row['orig_file'] = "440x248_" . $row['thumb'];
+            // $row['orig_file'] = "440x248_" . $row['thumb'];
+            $row['orig_file'] = ConvertSizes::$convert_sizes['videos']["640x352"]['prefix'] . $row['thumb'];
         }
 
         if ($row['type'] === "audios") {

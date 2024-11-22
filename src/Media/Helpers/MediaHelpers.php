@@ -1,27 +1,42 @@
 <?php
 
-namespace AJUR\FSNews\Helpers;
+namespace AJUR\FSNews\Media\Helpers;
 
 use AJUR\FSNews\Media;
 use AJUR\FSNews\MediaInterface;
 use AJUR\Wrappers\GDWrapper;
 use Arris\Toolkit\MimeTypes;
+use Exception;
+use Psr\Log\NullLogger;
 
 trait MediaHelpers
 {
     /**
      * Возвращает абсолютный URL к ресурсу
      *
-     * @param $type
-     * @param $creation_date
-     * @param $stringify
+     * @param string $type
+     * @param string $creation_date
+     * @param bool $stringify
      * @return void
      */
-    public static function getAbsoluteResourceURI($type = 'photos', $creation_date = 'now', $stringify = true)
+    public static function getAbsoluteResourceURI(string $type = 'photos', string $creation_date = 'now', bool $stringify = true)
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 
         //@todo ...
+
+        /*
+         * Должно заменить такое:
+         *
+        $photo['path'] = Media::getAbsoluteResourcePath("titles", $photo['cdate']);
+        $photo['path_rel'] = Media::getRelativeResourcePath("titles", $photo['cdate']);
+
+        $photo['url'] = str_replace(
+            config('PATH.STORAGE'),
+            '',
+            $photo['path']
+        );
+        */
 
 
     }
@@ -29,7 +44,7 @@ trait MediaHelpers
 
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public static function getRandomFilename(int $length = 20, string $suffix = '', $prefix_format = 'Ymd'):string
     {
@@ -53,14 +68,15 @@ trait MediaHelpers
      * @param $path
      * @param int $length
      * @param string $extension
+     * @param string $suffix - кастомный суффикс-хэш (например, для файлов, созданных на основе видео)
      * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-    public static function generateNewFile($path, int $length = 20, string $extension = '.jpg'): string
+    public static function generateNewFile($path, int $length = 20, string $extension = '.jpg', string $suffix = ''): string
     {
         MediaHelpers::validatePath($path); // проверяем существование пути и создаем при необходимости
         do {
-            $new_filename = MediaHelpers::getRandomFilename( $length ) . $extension;
+            $new_filename = MediaHelpers::getRandomFilename( $length, $suffix ) . $extension;
         } while (is_file( "{$path}/{$new_filename}" ));
         return $new_filename;
     }
@@ -77,6 +93,8 @@ trait MediaHelpers
      */
     public static function makePreviewFromVideo($source, $target, $timestamp, $sizes, $logger):string
     {
+        $logger = $logger ?? self::$logger ?? new NullLogger();
+
         $tn_timestamp = sprintf( "%02d:%02d:%02d", $timestamp / 3600, ($timestamp / 60) % 60, $timestamp % 60 );
 
         $logger->debug("[VIDEO] Таймштамп для превью:", [ $tn_timestamp ]);
@@ -129,6 +147,8 @@ trait MediaHelpers
         if (empty($params)) {
             return false;
         }
+
+        $logger = $logger ?? self::$logger ?? new NullLogger();
 
         $logger->debug("[VIDEO] Генерируем превью {$params['prefix']} ({$target}) на основе {$source}", [ $params ]);
 

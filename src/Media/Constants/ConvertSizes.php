@@ -1,6 +1,6 @@
 <?php
 
-namespace AJUR\FSNews\Constants;
+namespace AJUR\FSNews\Media\Constants;
 
 use Arris\Core\Dot;
 

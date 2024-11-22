@@ -1,8 +1,9 @@
 <?php
 
-namespace AJUR\FSNews\Constants;
+namespace AJUR\FSNews\Media\Constants;
 
 use Arris\Path;
+use RuntimeException;
 
 trait ContentDirs
 {
@@ -97,7 +98,7 @@ trait ContentDirs
         }
 
         if (!is_dir($path) && ( !mkdir($path, self::$DIR_PERMISSIONS, true) && !is_dir($path)) ) {
-            throw new \RuntimeException( sprintf( "Directory [%s] can't be created", $path ) );
+            throw new RuntimeException( sprintf( "Directory [%s] can't be created", $path ) );
         }
 
         return true;
