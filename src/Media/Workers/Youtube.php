@@ -8,6 +8,7 @@ use AJUR\Wrappers\GDWrapper;
 use Arris\Entity\Result;
 use Arris\Path;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class Youtube
 {
@@ -19,9 +20,9 @@ class Youtube
      */
     private LoggerInterface $logger;
 
-    public function __construct($logger)
+    public function __construct($logger = null)
     {
-        $this->logger = $logger;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     /**

@@ -130,7 +130,8 @@ class Media implements MediaInterface
         $logger->debug("[PHOTO] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
 
         $result->setData([
-            'fn_resource'   => "{$radix}.{$source_extension}",
+            'filename'      =>  "{$radix}.{$source_extension}",
+            'path'          =>  $path,
             'radix'         =>  $radix,
             'extension'     =>  $source_extension,
             'fn_origin'     =>  $fn_origin,
@@ -187,11 +188,12 @@ class Media implements MediaInterface
         $logger->debug('[AUDIO] Returned', [ $fn_origin ]);
 
         return (new Result())->setData([
-            'filename'  =>  $fn_origin,
-            'radix'     =>  $radix,
-            'extension' =>  $source_extension,
-            'status'    =>  'pending',
-            'type'      =>  self::MEDIA_TYPE_AUDIO
+            'filename'      =>  $fn_origin,
+            'path'          =>  $path,
+            'radix'         =>  $radix,
+            'extension'     =>  $source_extension,
+            'status'        =>  'pending',
+            'type'          =>  self::MEDIA_TYPE_AUDIO
         ]);
     }
 
@@ -234,10 +236,11 @@ class Media implements MediaInterface
         $logger->debug('[FILE] Returned', [ $fn_target]);
 
         return (new Result())->setData([
-            'filename'  =>  $fn_target,
-            'radix'     =>  $radix,
-            'status'    =>  'ready',
-            'type'      =>  self::MEDIA_TYPE_FILE
+            'filename'      =>  $fn_target,
+            'path'          =>  $path,
+            'radix'         =>  $radix,
+            'status'        =>  'ready',
+            'type'          =>  self::MEDIA_TYPE_FILE
         ]);
     }
 
@@ -351,12 +354,13 @@ class Media implements MediaInterface
         $logger->debug('[VIDEO] Превью сделаны, файл видео сохранён');
 
         return (new Result())->setData([
-            'filename'  =>  "{$radix}.{$source_extension}",
-            'radix'     =>  $radix,
-            'bitrate'   =>  $video_bitrate,
-            'duration'  =>  $video_duration,
-            'status'    =>  'pending',
-            'type'      =>  self::MEDIA_TYPE_VIDEO
+            'filename'      =>  "{$radix}.{$source_extension}",
+            'path'          =>  $path,
+            'radix'         =>  $radix,
+            'bitrate'       =>  $video_bitrate,
+            'duration'      =>  $video_duration,
+            'status'        =>  'pending',
+            'type'          =>  self::MEDIA_TYPE_VIDEO
         ]);
     } // uploadVideo
 
@@ -500,7 +504,7 @@ class Media implements MediaInterface
 
         $row['tags'] = empty($row['tags']) ? [] : MediaHelpers::deserialize($row['tags']);
 
-        if (is_null($row['descr'])) {
+        if (!isset($row['descr']) || is_null($row['descr'])) {
             $row['descr'] = '';
         }
 
