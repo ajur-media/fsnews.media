@@ -48,6 +48,45 @@ class Media implements MediaInterface
     }
 
     /**
+     * Универсальная точка входа - upload
+     * Тип определяется внутри
+     *
+     * @throws Exception
+     */
+    public function upload($fn_source, $watermark_corner, LoggerInterface $logger = null):Result
+    {
+        $logger = $logger ?? self::$logger ?? new NullLogger();
+
+        $f_info = finfo_open( FILEINFO_MIME_TYPE );
+        $f_info_mimetype = finfo_file( $f_info, $fn_source);
+        $allow = false;
+
+        foreach (AllowedMimeTypes::$allowed_mime_types as $mimetype) {
+            if (stripos( $f_info_mimetype, $mimetype ) === 0) {
+                $allow = true;
+                break;
+            }
+        }
+
+        if (!$allow) {
+            return new Result(false, "[UPLOAD] Загружен файл с неразрешенным MIME-типом `{$f_info_mimetype}`" );
+        }
+
+        if (stripos($f_info_mimetype, 'image/') !== false) {
+            $result = Media::uploadImage($fn_source, $watermark_corner, $logger);
+        } elseif (stripos( $f_info_mimetype, 'audio/' ) !== false) {
+            $result = Media::uploadAudio( $fn_source, $logger );
+        } elseif (stripos( $f_info_mimetype, 'video/' ) !== false) {
+            $result = Media::uploadVideo( $fn_source, $logger );
+        } else {
+            $result = Media::uploadAnyFile( $fn_source, $logger );
+        }
+
+        return $result;
+
+    }
+
+    /**
      * upload & create thumbnails for Embedded Photo
      *
      * @param string|Path $fn_source
@@ -73,7 +112,8 @@ class Media implements MediaInterface
         $path = self::getAbsoluteResourcePath('photos', 'now');
         self::validatePath($path);
         $radix = self::getRandomFilename(20);
-        $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
+        // $source_extension = MimeTypes::fromExtension( MimeTypes::fromFilename($fn_source) );
+        $source_extension = MediaHelpers::detectFileExtension($fn_source);
 
         $resource_filename = "{$radix}.{$source_extension}";
 
