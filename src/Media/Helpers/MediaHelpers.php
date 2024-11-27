@@ -74,9 +74,9 @@ trait MediaHelpers
      */
     public static function generateNewFile($path, int $length = 20, string $extension = '.jpg', string $suffix = ''): string
     {
-        MediaHelpers::validatePath($path); // проверяем существование пути и создаем при необходимости
+        self::validatePath($path); // проверяем существование пути и создаем при необходимости
         do {
-            $new_filename = MediaHelpers::getRandomFilename( $length, $suffix ) . $extension;
+            $new_filename = self::getRandomFilename( $length, $suffix ) . $extension;
         } while (is_file( "{$path}/{$new_filename}" ));
         return $new_filename;
     }
