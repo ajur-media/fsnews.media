@@ -13,6 +13,7 @@ trait AllowedMimeTypes
         'audio/',
         'image/',
         'video/',
+        'application/octet-stream',
         'application/pdf',
         'application/msword',
         'application/vnd.ms-powerpoint',
