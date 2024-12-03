@@ -10,11 +10,21 @@ use Arris\Path;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+/**
+ * Воркер для работы с ютубом.
+ * По-хорошему, нужно переписать целиком, с учетом библиотеки
+ * https://github.com/madcoda/php-youtube-api
+ * и API ключа.
+ * Но мы почти не работаем с ютубом.
+ *
+ * Реализует методы
+ * - getVideoTitle() - для получения названия видео (всегда отдает пустую строку)
+ * - getVideoThumbnail() - сохраняет превьюшку видео
+ *
+ * Методы называются единообразно
+ */
 class Youtube
 {
-    //
-    // getYoutubeVideoPreview(id) -> result
-
     /**
      * @var LoggerInterface
      */
@@ -26,52 +36,31 @@ class Youtube
     }
 
     /**
-     * Загружает с ютуба название видео. Точно работает с видео, с shorts не проверялось.
+     * Загружает с ютуба название видео.
+     * Не работает с 2021 года, всегда возвращает пустую строку
      *
      * @param string $video_id
      * @param string $default
      * @return Result [title]
      */
-    public function getYoutubeVideoTitle(string $video_id, string $default = ''):Result
+    public function getVideoTitle(string $video_id, string $default = ''):Result
     {
-        $r = new Result();
-        $r->title = $default;
+        $result = new Result();
+        $result->title = $default;
+        $result->error("Youtube disabled simple way for get_video_info");
+        return $result;
 
-        //@todo: curl?
-        $video_info = @file_get_contents("http://youtube.com/get_video_info?video_id={$video_id}");
-
-        if (!$video_info) {
-            $r->error("Invalid [http://youtube.com/get_video_info] response");
-            return $r;
-        }
-
-        parse_str($video_info, $vi_array);
-        $r->video_info = $video_info;
-
-        if (!array_key_exists('player_response', $vi_array)) {
-            $r->error("No [player_response] in youtube answer");
-            return $r;
-        }
-
-        $video_info = json_decode($vi_array['player_response']);
-        $r->player_response = $vi_array['player_response'];
-
-        if (is_null($video_info)) {
-            $r->error("Can't decode player_response from youtube answer");
-            return $r;
-        }
-
-        $r->title = $video_info->videoDetails->title ?: $default;
-
-        return $r;
+        //@todo: see https://github.com/madcoda/php-youtube-api
     }
 
     /**
+     * Скачивает превьюшку указанного видео с ютуба
+     *
      * @param $url - URL скачиваемого видео
      * @param $fn_default_preview - путь к дефолтному превью, для админки 47 = Path::create(config('PATH.WEB'))->join("/frontend/images/")->joinName('youtube_video_emptypreview.jpg')->toString()
      * @return Result
      */
-    public function getYoutubeVideoPreview($url, $fn_default_preview):Result
+    public function getVideoThumbnail($url, $fn_default_preview):Result
     {
         $result = new Result();
 
@@ -149,10 +138,12 @@ class Youtube
 
             $result->setData([
                 'url'               =>  $url,
+                'url_hash'          =>  $video_url_hash,
                 'target_filename'   =>  $target_filename,
                 'target_file'       =>  $target_file,
-                'status'        =>  'pending',
-                'type'          =>  MediaInterface::MEDIA_TYPE_YOUTUBE
+                'status'            =>  'ready',
+                'mimetype'          =>  '*/youtube',
+                'type'              =>  MediaInterface::MEDIA_TYPE_YOUTUBE
             ]);
 
         } catch (\RuntimeException | \Exception $e) {

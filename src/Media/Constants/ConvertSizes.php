@@ -24,7 +24,8 @@ trait ConvertSizes
             "100x100"   =>  [
                 'maxWidth'  =>  100,
                 'maxHeight' =>  100,
-                'method'    =>  "getfixedpicture",
+                'method'    =>  'getfixedpicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'    =>  '100x100_',
                 'quality'   =>  80,
             ],
@@ -35,8 +36,9 @@ trait ConvertSizes
             "440x300"   =>  [
                 'maxWidth'  =>  440,
                 'maxHeight' =>  999,
-                'method'    =>  "resizepictureaspect",
-                'wmFile'    =>  "l.png",
+                'method'    =>  'resizepictureaspect',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'resizePictureAspect' ],
+                'wmFile'    =>  'l.png',
                 'wmMargin'  =>  10,
                 'prefix'    =>  '440x300_',
                 'quality'   =>  80,
@@ -48,8 +50,9 @@ trait ConvertSizes
             "630x465"   =>  [
                 'maxWidth'  =>  630,
                 'maxHeight' =>  465,
-                'method'    =>  "resizepictureaspect",
-                'wmFile'    =>  "l.png",
+                'method'    =>  'resizepictureaspect',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'resizePictureAspect' ],
+                'wmFile'    =>  'l.png',
                 'wmMargin'  =>  30,
                 'prefix'    =>  '630x465_',
                 'quality'   =>  80,
@@ -64,7 +67,8 @@ trait ConvertSizes
                 'maxWidth'  =>  1280,
                 'maxHeight' =>  1024,
                 'method'    =>  "resizeimageaspect",
-                'wmFile'    =>  "l.png",
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'resizeImageAspect' ],
+                'wmFile'    =>  'l.png',
                 'wmMargin'  =>  30,
                 'prefix'    =>  '1280x1024_',
                 'quality'   =>  90,
@@ -77,7 +81,8 @@ trait ConvertSizes
                  */
                 'maxWidth'  =>  100,
                 'maxHeight' =>  100,
-                'method'    =>  "getfixedpicture",
+                'method'    =>  'getfixedpicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'    =>  '100x100_',
                 'quality'   =>  80,
             ],
@@ -87,7 +92,8 @@ trait ConvertSizes
             "640x352"   =>  [
                 'maxWidth'  =>  640,
                 'maxHeight' =>  360,
-                'method'    =>  "getfixedpicture",
+                'method'    =>  'getfixedpicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'    =>  '640x352_',
                 'quality'   =>  80,
             ],
@@ -112,7 +118,8 @@ trait ConvertSizes
             "100x100"   =>  [
                 'maxWidth'  =>  100,
                 'maxHeight' =>  100,
-                'method'    =>  "getfixedpicture",
+                'method'    =>  'getfixedpicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'    =>  '100x100_',
                 'quality'   =>  80
             ],
@@ -122,7 +129,8 @@ trait ConvertSizes
             "640x352"   =>  [
                 'maxWidth'  =>  640,
                 'maxHeight' =>  360,
-                'method'    =>  "getfixedpicture",
+                'method'    =>  'getfixedpicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'    =>  '640x325_',
                 'quality'   =>  80
             ],
@@ -148,6 +156,7 @@ trait ConvertSizes
                 'maxWidth'      =>  300,
                 'maxHeight'     =>  266,
                 'method'        =>  'getFixedPicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'        =>  'resize_',
                 'quality'       =>  80
             ],
@@ -159,6 +168,7 @@ trait ConvertSizes
                 'maxWidth'      =>  205,
                 'maxHeight'     =>  150,
                 'method'        =>  'getFixedPicture',
+                'callback'  =>  [ '\AJUR\Wrappers\GDWrapper', 'getFixedPicture' ],
                 'prefix'        =>  'small_',
                 'quality'       =>  70
             ],

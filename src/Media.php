@@ -122,7 +122,7 @@ class Media implements MediaInterface
         $available_photo_sizes = self::getConvertSizes('photos');
 
         foreach ($available_photo_sizes as $size => $params) {
-            $method = $params['method'];
+            $method = $params['callback'] ?? $params['method'];
             $max_width = $params['maxWidth'];
             $max_height = $params['maxHeight'];
             $quality = $params['quality'];
@@ -369,27 +369,27 @@ class Media implements MediaInterface
                 $params_640x352,
                 $logger
             );
+
+            // генерируем малые превьюшки. Для наглядности я развернул цикл из двух итераций на два вызова:
+
+            // 100x100
+            $params = ConvertSizes::$convert_sizes['videos']['100x100'];
+            MediaHelpers::resizePreview(
+                $fn_preview_640x352,
+                Path::create($path)->joinName("{$params['prefix']}{$radix}.jpg")->toString(),
+                $params,
+                $logger
+            );
+
+            // 440x248
+            $params = self::$convert_sizes['videos']['440x248'];
+            MediaHelpers::resizePreview(
+                $fn_preview_640x352,
+                Path::create($path)->joinName("{$params['prefix']}{$radix}.jpg")->toString(),
+                $params,
+                $logger
+            );
         }
-
-        // генерируем малые превьюшки. Для наглядности я развернул цикл из двух итераций на два вызова:
-
-        // 100x100
-        $params = ConvertSizes::$convert_sizes['videos']['100x100'];
-        MediaHelpers::resizePreview(
-            $fn_preview_640x352,
-            Path::create($path)->joinName("{$params['prefix']}{$radix}.jpg")->toString(),
-            $params,
-            $logger
-        );
-
-        // 440x248
-        $params = self::$convert_sizes['videos']['440x248'];
-        MediaHelpers::resizePreview(
-            $fn_preview_640x352,
-            Path::create($path)->joinName("{$params['prefix']}{$radix}.jpg")->toString(),
-            $params,
-            $logger
-        );
 
         $logger->debug('[VIDEO] Превью сделаны, файл видео сохранён');
 
