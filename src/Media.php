@@ -7,16 +7,15 @@ use AJUR\FSNews\Media\Constants\ContentDirs;
 use AJUR\FSNews\Media\Constants\ConvertSizes;
 use AJUR\FSNews\Media\Helpers\DTHelper;
 use AJUR\FSNews\Media\Helpers\MediaHelpers;
+use AJUR\FSNews\Media\Workers\Audio;
 use AJUR\FSNews\Media\Workers\Photo;
 use AJUR\FSNews\Media\Workers\Video;
-use AJUR\Wrappers\GDWrapper;
 use Arris\Entity\Result;
 use Arris\Path;
-use Arris\Toolkit\MimeTypes;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use RuntimeException;
+
 
 class Media implements MediaInterface
 {
@@ -125,7 +124,8 @@ class Media implements MediaInterface
 
         } elseif (stripos( $f_info_mimetype, 'audio/' ) !== false) {
 
-            $result = Media::uploadAudio( $fn_source, $logger );
+            $worker = new Audio(self::$options, $logger);
+            $result = $worker->upload($fn_source);
 
         } elseif (stripos( $f_info_mimetype, 'video/' ) !== false) {
 
@@ -172,47 +172,8 @@ class Media implements MediaInterface
     {
         $logger = $logger ?? self::$logger ?? new NullLogger();
 
-        $logger->debug('[AUDIO] Обрабатываем как аудио (audio/*)');
-
-        if (empty($fn_source) || !is_file($fn_source)) {
-            $logger->error('Invalid source file for image upload.', ['fn_source' => $fn_source]);
-            return new Result(false, 'Invalid source file.');
-        }
-
-        $path = self::getAbsoluteResourcePath('audios', 'now');
-        self::validatePath($path);
-        $radix = self::getRandomFilename(20);
-
-        $source_extension = MediaHelpers::detectFileExtension($fn_source);
-
-        $filename_original = "{$radix}.{$source_extension}";
-
-        $logger->debug("[AUDIO] Загруженный аудиофайл будет иметь корень имени:", [ $filename_original ]);
-
-        // $prefix = current(self::$convert_sizes['audios'])['prefix'];
-        $prefix = ConvertSizes::getConvertSizes('audios._.prefix');
-
-        // ничего не конвертируем, этим займется крон-скрипт
-        $fn_origin = Path::create($path)->joinName("{$prefix}{$filename_original}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
-
-        if (!move_uploaded_file($fn_source, $fn_origin)) {
-            $logger->error("[AUDIO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", [ $fn_source, $fn_origin ]);
-            throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_origin}", -1);
-        }
-
-        $logger->debug("[AUDIO] Загруженный файл {$fn_source} сохранён в файл {$fn_origin}: ", [ $fn_source, $fn_origin ]);
-
-        $logger->debug('[AUDIO] Stored as', [ $fn_origin ]);
-        $logger->debug('[AUDIO] Returned', [ $fn_origin ]);
-
-        return (new Result())->setData([
-            'filename'      =>  $fn_origin,
-            'path'          =>  $path,
-            'radix'         =>  $radix,
-            'extension'     =>  $source_extension,
-            'status'        =>  'pending',
-            'type'          =>  self::MEDIA_TYPE_AUDIO
-        ]);
+        $worker = new Audio(self::$options, $logger);
+        return $worker->upload($fn_source);
     }
 
     /**
