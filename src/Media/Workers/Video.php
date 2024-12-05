@@ -46,12 +46,7 @@ class Video
             return $result;
         }
 
-        $ffprobe = $this->options['exec.ffprobe'];
-
-        $cmd = "{$ffprobe} -v quiet -print_format json -show_format -show_streams {$fn_source} 2>&1";
-
-        $json = shell_exec($cmd);
-        $json = json_decode($json, true);
+        $json = $this->getVideoInfo($fn_source);
 
         if (!array_key_exists('format', $json)) {
             $message = "[VIDEO] Это не видеофайл: отсутствует секция FORMAT";
@@ -206,6 +201,23 @@ class Video
         ]);
 
         return $result;
+    }
+
+    /**
+     * Возвращает инфо о видеофайле в JSON-deserialized
+     *
+     * @param $fn_source
+     * @return array
+     */
+    private function getVideoInfo($fn_source)
+    {
+        $ffprobe = $this->options['exec.ffprobe'];
+
+        $cmd = "{$ffprobe} -v quiet -print_format json -show_format -show_streams {$fn_source} 2>&1";
+
+        $json = shell_exec($cmd);
+        $json = json_decode($json, true);
+        return $json;
     }
 
 }

@@ -21,19 +21,10 @@ interface MediaInterface
     const MEDIA_TYPE_FILE = 'files';
     const MEDIA_TYPE_YOUTUBE = 'youtube';
 
-    /**
-     * @param array $content_dirs
-     * @param array $options
-     * @param LoggerInterface|null $logger
-     *
-     * Must unit:
-     *
-     * Media::init([
-     *   'path.storage'     =>  Path::create( getenv('PATH.INSTALL'), true )->join('www')->join('i')->toString(true),
-     *   'path.watermarks'  =>   Path::create( getenv('PATH.INSTALL'), true)->join('www/frontend/images/watermarks/')->toString(true)
-     * ], [], $logger)
-     */
-    public static function init(array $options = [], array $content_dirs = [], LoggerInterface $logger = null);
+
+    public static function init(array $options = [], array $content_dirs = [], array $additional_mime_types = [], LoggerInterface $logger = null);
+
+    public function upload($fn_source, $watermark_corner, LoggerInterface $logger = null):Result;
 
     public static function uploadImage($fn_source, $watermark_corner, LoggerInterface $logger);
 

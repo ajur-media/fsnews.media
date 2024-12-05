@@ -31,12 +31,30 @@ class Media implements MediaInterface
      */
     public static array $options = [];
 
-    public static function init(array $options = [], array $content_dirs = [], LoggerInterface $logger = null)
+    /**
+     * @param array $options
+     * @param array $content_dirs
+     * @param array $additional_mime_types
+     * @param LoggerInterface|null $logger
+     *
+     * Must unit:
+     *
+     * Media::init([
+     *   'path.storage'     =>  Path::create( getenv('PATH.INSTALL'), true )->join('www')->join('i')->toString(true),
+     *   'path.watermarks'  =>  Path::create( getenv('PATH.INSTALL'), true)->join('www/frontend/images/watermarks/')->toString(true)
+     * ], [], [], $logger)
+     */
+    public static function init(array $options = [], array $content_dirs = [], array $additional_mime_types = [], LoggerInterface $logger = null)
     {
         if (!empty($content_dirs)) {
             foreach ($content_dirs as $from => $to) {
                 self::$content_dirs[ $from ] = $to;
             }
+        }
+
+        if (!empty($additional_mime_types)) {
+            self::$allowed_mime_types = array_merge(self::$allowed_mime_types, $additional_mime_types);
+            self::$allowed_mime_types = array_unique(self::$allowed_mime_types);
         }
 
         self::$options['storage.root'] = $options['path.storage'] ?? '/'; //@required
@@ -51,10 +69,34 @@ class Media implements MediaInterface
     }
 
     /**
+     * Добавляет mime-типы или переопределяет их
+     *
+     * @param array $mimetypes
+     * @param bool $append
+     * @return array
+     */
+    public static function setMimeTypes(array $mimetypes, bool $append = true):array
+    {
+        if ($append) {
+            self::$allowed_mime_types = array_merge(self::$allowed_mime_types, $mimetypes);
+        } else {
+            self::$allowed_mime_types = $mimetypes;
+        }
+        self::$allowed_mime_types = array_unique(self::$allowed_mime_types);
+
+        return self::$allowed_mime_types;
+    }
+
+    /**
      * Универсальная точка входа - upload
      * Тип определяется внутри
      *
+     * @param $fn_source
+     * @param $watermark_corner
+     * @param LoggerInterface|null $logger
+     * @return Result
      * @throws Exception
+     * @throws MediaException
      */
     public function upload($fn_source, $watermark_corner, LoggerInterface $logger = null):Result
     {
@@ -72,7 +114,7 @@ class Media implements MediaInterface
         }
 
         if (!$allow) {
-            return new Result(false, "[UPLOAD] Загружен файл с неразрешенным MIME-типом `{$f_info_mimetype}`" );
+            return new Result(false, "[UPLOAD] Попытка загрузить файл с неразрешенным MIME-типом `{$f_info_mimetype}`" );
         }
 
         if (stripos($f_info_mimetype, 'image/') !== false) {
@@ -180,8 +222,8 @@ class Media implements MediaInterface
             'radix'         =>  $radix,
             'extension'     =>  $source_extension,
             'fn_origin'     =>  $fn_origin,
-            'status'        =>  'pending',
-            'type'          =>  self::MEDIA_TYPE_PHOTOS
+            'status'        =>  'ready',
+            'type'          =>  MediaInterface::MEDIA_TYPE_PHOTOS
         ]);
 
         return $result;
@@ -254,15 +296,15 @@ class Media implements MediaInterface
     {
         $logger = $logger ?? self::$logger ?? new NullLogger();
 
-        $logger->debug('[FILE] Обрабатываем как аудио (audio/*)');
+        $logger->debug('[FILE] Обрабатываем как абстрактный файл (audio/*)');
 
-        $path = self::getAbsoluteResourcePath('audios', 'now');
+        $path = self::getAbsoluteResourcePath('files', 'now');
         self::validatePath($path);
         $radix = self::getRandomFilename(20);
         $source_extension = MediaHelpers::detectFileExtension($fn_source);
         $filename_origin = "{$radix}.{$source_extension}";
 
-        $logger->debug("[FILE] Загруженный аудиофайл будет иметь корень имени:", [ $filename_origin ]);
+        $logger->debug("[FILE] Загруженный файл будет иметь корень имени:", [ $filename_origin ]);
 
         $prefix = ConvertSizes::getConvertSizes('files._.prefix');
 
@@ -284,7 +326,7 @@ class Media implements MediaInterface
             'path'          =>  $path,
             'radix'         =>  $radix,
             'status'        =>  'ready',
-            'type'          =>  self::MEDIA_TYPE_FILE
+            'type'          =>  MediaInterface::MEDIA_TYPE_FILE
         ]);
     }
 
@@ -306,109 +348,6 @@ class Media implements MediaInterface
         $worker = new Video(self::$options, $logger);
 
         return $worker->upload($fn_source);
-
-        /*$result = new Result();
-
-        $logger->debug('[VIDEO] Обрабатываем как видео (video/*)');
-
-        if (!is_readable($fn_source)) {
-            $result->error("{$fn_source} unreadable");
-            return $result;
-        }
-
-        $ffprobe = self::$options['exec.ffprobe'];
-
-        $cmd = "{$ffprobe} -v quiet -print_format json -show_format -show_streams {$fn_source} 2>&1";
-
-        $json = shell_exec($cmd);
-        $json = json_decode($json, true);
-
-        if (!array_key_exists('format', $json)) {
-            $message = "[VIDEO] Это не видеофайл: отсутствует секция FORMAT";
-            $logger->debug($message);
-            throw new MediaException($message);
-        }
-
-        $json_format = $json['format'];
-
-        if (!array_key_exists('streams', $json)) {
-            $message = "[VIDEO] Это не видеофайл: отсутствует секция STREAMS";
-            $logger->debug($message);
-            throw new MediaException($message);
-        }
-
-        $json_stream_video = current(array_filter($json['streams'], function ($v) {
-            return ($v['codec_type'] == 'video');
-        }));
-
-        if (empty($json_stream_video)) {
-            $message = "[VIDEO] Это не видеофайл: отсутствует видеопоток";
-            $logger->debug($message);
-            throw new MediaException($message);
-        }
-
-        $video_duration = round($json_stream_video['duration']) ?: round($json_format['duration']);
-        $video_bitrate = round($json_stream_video['bit_rate']) ?: round($json_format['bit_rate']);
-
-        if ($video_duration <= 0) {
-            throw new MediaException("[VIDEO] Видеофайл не содержит видеопоток или видеопоток имеет нулевую длительность");
-        }
-
-        $logger->debug("[VIDEO] Длина потока видео {$video_duration}");
-
-        // готовим имя основного файла
-
-        $path = self::getAbsoluteResourcePath('videos', 'now');
-        self::validatePath($path);
-        $radix = self::getRandomFilename(20);
-        $source_extension = MediaHelpers::detectFileExtension($fn_source);
-
-        $fn_original = Path::create( $path )->joinName("{$radix}.{$source_extension}")->toString();
-
-        if (!move_uploaded_file($fn_source, $fn_original)) {
-            $logger->error("[VIDEO] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_original}", [ $fn_source, $fn_original ]);
-            throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_original}", -1);
-        }
-
-        $logger->debug("[VIDEO] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_original}", [ $fn_original ]);
-
-        $result->setData('thumbnails', []);
-
-        $worker = new Video($logger);
-
-        foreach (ConvertSizes::getConvertSizes('videos') as $tn_params) {
-            $prefix = $tn_params['prefix'];
-            $tn_file = Path::create($path)->joinName("{$prefix}{$radix}.jpg")->toString();
-
-            $r = $worker->getVideoThumbnail(
-                $fn_original,
-                $tn_file,
-                round($video_duration / 2),
-                $tn_params,
-                $logger
-            );
-
-            $result->addData('thumbnails', [[
-                'target'    =>  $tn_file,
-                'time'      =>  $r->getData('execution_time'),
-                'cmd'       =>  $r->getData('shell_command'),
-                '_'         =>  $r->serialize()
-            ]]);
-        }
-
-        $logger->debug('[VIDEO] Превью сделаны, файл видео сохранён');
-
-        $result->setData([
-            'filename'      =>  "{$radix}.{$source_extension}",
-            'path'          =>  $path,
-            'radix'         =>  $radix,
-            'bitrate'       =>  $video_bitrate,
-            'duration'      =>  $video_duration,
-            'status'        =>  'pending',
-            'type'          =>  self::MEDIA_TYPE_VIDEO
-        ]);
-
-        return $result;*/
     } // uploadVideo
 
     /**
