@@ -7,5 +7,8 @@
 vendor              export-ignore
 makefile            export-ignore
 phpunit.xml         export-ignore
+tests               export-ignore
+LEGACY.md           export-ignore
+MEDIA_MIGRATION_CHANGES.md export-ignore
 
 

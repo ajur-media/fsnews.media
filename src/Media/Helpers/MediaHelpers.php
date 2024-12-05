@@ -5,6 +5,7 @@ namespace AJUR\FSNews\Media\Helpers;
 use AJUR\FSNews\Media;
 use AJUR\FSNews\MediaInterface;
 use AJUR\Wrappers\GDWrapper;
+use Arris\Entity\Result;
 use Arris\Toolkit\MimeTypes;
 use Exception;
 use Psr\Log\NullLogger;
@@ -82,18 +83,21 @@ trait MediaHelpers
     }
 
     /**
+     * Legacy: moved to WORKER
+     *
      * Генерирует картинку из видео по временнОй метке.
      *
-     * @param $source    - исходное видео, имя файла с путём
-     * @param $target    - сгенерированное имя файда с путём для превью
+     * @param $source - исходное видео, имя файла с путём
+     * @param $target - сгенерированное имя файда с путём для превью
      * @param $timestamp - деление на 2 делается вне функции
-     * @param $sizes     - параметры
+     * @param $sizes - параметры
      * @param $logger
-     * @return string
+     * @return Result
      */
-    public static function makePreviewFromVideo($source, $target, $timestamp, $sizes, $logger):string
+    public static function makePreviewFromVideo($source, $target, $timestamp, $sizes, $logger):Result
     {
         $logger = $logger ?? self::$logger ?? new NullLogger();
+        $result = new Result();
 
         $tn_timestamp = sprintf( "%02d:%02d:%02d", $timestamp / 3600, ($timestamp / 60) % 60, $timestamp % 60 );
 
@@ -108,11 +112,13 @@ trait MediaHelpers
             'bin'       =>  Media::$options['exec.ffmpeg'],
                             '-hide_banner',
                             '-y',
+            'ss'        =>  "-ss {$tn_timestamp}",
+            'accurate'  =>  Media::$options['no_accurate_seek'] ? "-noaccurate_seek" : ' ',
             'source'    =>  "-i {$source}",
                             "-an",
-            'ss'        =>  "-ss {$tn_timestamp}",
+            // 'ss'        =>  "-ss {$tn_timestamp}",
                             "-r 1",
-                            "vframes 1",
+                            "-vframes 1",
             'sizes'     =>  "-s {$w}x{$h}",
             'scale'     =>  $vfscale,
             'imagetype' =>  "-f mjpeg",
@@ -125,14 +131,23 @@ trait MediaHelpers
 
         $logger->debug("[VIDEO] FFMpeg команда для генерации превью: ", [ $cmd ]);
 
+        $t = microtime(true);
         shell_exec( $cmd );
+        $tdiff = microtime(true) - $t;
 
         while (!is_file( $target )) {
             sleep( 1 );
             $logger->debug("[VIDEO] Секунду спустя превью не готово");
         }
 
-        return $target;
+        $result->setData([
+            'timestamp'     =>  $tn_timestamp,
+            'vfscale'       =>  $vfscale,
+            'shell_command' =>  $cmd,
+            'execution_time'=>  round($tdiff, 6)
+        ]);
+
+        return $result;
     }
 
     /**
@@ -140,9 +155,9 @@ trait MediaHelpers
      * @param $target
      * @param array $params
      * @param $logger
-     * @return \AJUR\Wrappers\GDImageInfo|false
+     * @return bool
      */
-    public static function resizePreview($source, $target, array $params = [], $logger = null)
+    public static function resizePreview($source, $target, array $params = [], $logger = null): bool
     {
         if (empty($params)) {
             return false;
@@ -158,7 +173,8 @@ trait MediaHelpers
             $params['maxWidth'],
             $params['maxHeight'],
             $params['quality']
-        )->valid;
+        )->isValid();
+
         $logger->debug("[VIDEO] Результат генерации превью {$params['prefix']}: ", [ $generate_result ]);
 
         return $generate_result;
@@ -185,7 +201,6 @@ trait MediaHelpers
     }
 
     /**
-     * LEGACY!!!
      * Получает MIME-тип файла
      *
      * @param string $filepath
@@ -197,29 +212,15 @@ trait MediaHelpers
     }
 
     /**
-     * LEGACY!!!
-     * Получает расширение по MIME-типу
+     * Вычисляет расширение файла на основании MIME-типа
      * (без точки)
      *
-     * @param $mime
-     * @return mixed|string|null
+     * @param $filepath - путь к файлу
+     * @return string
      */
-    public static function getFileExtension($mime)
+    public static function detectFileExtension($filepath): string
     {
-        return MimeTypes::getExtension($mime);
-    }
-
-    /**
-     * LEGACY!!!
-     * Вычисляет расширение файла по MIME-типу
-     * (без точки)
-     *
-     * @param $filepath
-     * @return mixed|string|null
-     */
-    public static function detectFileExtension($filepath)
-    {
-        return MimeTypes::getExtension( mime_content_type($filepath) );
+        return MimeTypes::getExtension( self::getMimeType($filepath) );
     }
 
 

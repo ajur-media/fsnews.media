@@ -13,6 +13,19 @@ use Psr\Log\NullLogger;
  * Заготовка класса для работы с RuTube.
  * Предоставляет методы
  *
+ * Библиотеки, работающие с RuTube:
+ *
+ * https://packagist.org/packages/rutube/php-api-client
+ * https://github.com/rutube/php-api-client
+ * Устарела, надо переписывать
+ *
+ * https://packagist.org/packages/kphoen/vex
+ * https://github.com/K-Phoen/Vex
+ * Много вариантов загрузки видео, но последний раз обновлялось в 2014
+ *
+ * https://packagist.org/packages/drnixx/php-rutube-client
+ * 2018 год
+ *
  */
 class RuTube
 {

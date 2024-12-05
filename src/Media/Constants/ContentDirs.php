@@ -2,6 +2,7 @@
 
 namespace AJUR\FSNews\Media\Constants;
 
+use AJUR\FSNews\Media;
 use Arris\Path;
 use RuntimeException;
 
@@ -52,7 +53,7 @@ trait ContentDirs
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 
-        $path = Path::create( self::$options['storage.root'])
+        $path = Path::create( Media::$options['storage.root'])
             ->join( self::getContentDir($type) )
             ->join( date('Y', $creation_date) )
             ->join( date('m', $creation_date) )
