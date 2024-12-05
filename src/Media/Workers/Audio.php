@@ -70,7 +70,7 @@ class Audio
         $logger->debug('[AUDIO] Returned', [ $fn_origin ]);
 
         return (new Result())->setData([
-            'filename'      =>  $fn_origin,
+            'filename'      =>  "{$prefix}{$filename_original}",
             'path'          =>  $path,
             'radix'         =>  $radix,
             'extension'     =>  $source_extension,

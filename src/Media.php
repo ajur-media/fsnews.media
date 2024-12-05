@@ -7,6 +7,7 @@ use AJUR\FSNews\Media\Constants\ContentDirs;
 use AJUR\FSNews\Media\Constants\ConvertSizes;
 use AJUR\FSNews\Media\Helpers\DTHelper;
 use AJUR\FSNews\Media\Helpers\MediaHelpers;
+use AJUR\FSNews\Media\Workers\Any;
 use AJUR\FSNews\Media\Workers\Audio;
 use AJUR\FSNews\Media\Workers\Photo;
 use AJUR\FSNews\Media\Workers\Video;
@@ -106,6 +107,9 @@ class Media implements MediaInterface
         $f_info_mimetype = finfo_file( $f_info, $fn_source);
         $allow = false;
 
+        $logger->debug( '[UPLOAD] MIME-тип загруженного файла: ', [ $f_info_mimetype ] );
+        $logger->debug( '[UPLOAD] Размер   загруженного файла: ', [ filesize($fn_source) ] );
+
         foreach (AllowedMimeTypes::$allowed_mime_types as $mimetype) {
             if (stripos( $f_info_mimetype, $mimetype ) === 0) {
                 $allow = true;
@@ -133,9 +137,8 @@ class Media implements MediaInterface
             $result = $worker->upload($fn_source);
 
         } else {
-
-            $result = Media::uploadAnyFile( $fn_source, $logger );
-
+            $worker = new Any(self::$options, $logger);
+            $result = $worker->upload($fn_source);
         }
 
         return $result;
@@ -188,38 +191,8 @@ class Media implements MediaInterface
     {
         $logger = $logger ?? self::$logger ?? new NullLogger();
 
-        $logger->debug('[FILE] Обрабатываем как абстрактный файл (audio/*)');
-
-        $path = self::getAbsoluteResourcePath('files', 'now');
-        self::validatePath($path);
-        $radix = self::getRandomFilename(20);
-        $source_extension = MediaHelpers::detectFileExtension($fn_source);
-        $filename_origin = "{$radix}.{$source_extension}";
-
-        $logger->debug("[FILE] Загруженный файл будет иметь корень имени:", [ $filename_origin ]);
-
-        $prefix = ConvertSizes::getConvertSizes('files._.prefix');
-
-        // никаких действий над файлом не совершается
-        $fn_target = Path::create($path)->joinName("{$prefix}{$filename_origin}")->toString(); // ПРЕФИКС УЖЕ СОДЕРЖИТ `_`
-
-        if (!move_uploaded_file($fn_source, $fn_target)) {
-            $logger->error("[FILE] Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", [ $fn_source, $fn_target ]);
-            throw new MediaException("Не удалось сохранить сохранить загруженный файл {$fn_source} как файл оригинала {$fn_target}", -1);
-        }
-
-        $logger->debug("[FILE] Загруженный файл {$fn_source} сохранён как оригинал в файл {$fn_target}: ", [ $fn_source, $fn_target ]);
-
-        $logger->debug('[FILE] Stored as', [ $fn_target ]);
-        $logger->debug('[FILE] Returned', [ $fn_target]);
-
-        return (new Result())->setData([
-            'filename'      =>  $fn_target,
-            'path'          =>  $path,
-            'radix'         =>  $radix,
-            'status'        =>  'ready',
-            'type'          =>  MediaInterface::MEDIA_TYPE_FILE
-        ]);
+        $worker = new Any(self::$options, $logger);
+        return $worker->upload($fn_source);
     }
 
     /**
@@ -240,7 +213,7 @@ class Media implements MediaInterface
         $worker = new Video(self::$options, $logger);
 
         return $worker->upload($fn_source);
-    } // uploadVideo
+    }
 
     /**
      * Удаляет тайтловое изображение и все его превьюшки
