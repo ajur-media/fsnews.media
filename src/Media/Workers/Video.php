@@ -4,6 +4,7 @@ namespace AJUR\FSNews\Media\Workers;
 
 use AJUR\FSNews\Media;
 use AJUR\FSNews\Media\Constants\ContentDirs;
+use AJUR\FSNews\Media\Constants\ConvertSizes;
 use AJUR\FSNews\Media\Helpers\MediaHelpers;
 use AJUR\FSNews\MediaException;
 use AJUR\FSNews\MediaInterface;
@@ -100,7 +101,7 @@ class Video
 
         $result->setData('thumbnails', []);
 
-        foreach (\AJUR\FSNews\Media\Constants\ConvertSizes::getConvertSizes('videos') as $tn_params) {
+        foreach (ConvertSizes::getConvertSizes('videos') as $tn_params) {
             $prefix = $tn_params['prefix'];
             $tn_file = Path::create($path)->joinName("{$prefix}{$radix}.jpg")->toString();
 
