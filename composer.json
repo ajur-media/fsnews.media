@@ -20,13 +20,13 @@
         "ext-fileinfo": "*",
         "ext-curl": "*",
         "psr/log": "*",
-        "karelwintersky/arris": "^2.12",
+        "karelwintersky/arris": "^2",
         "karelwintersky/arris.toolkit.mimetypes": "^1.99",
         "ajur-media/php_gdwrapper": "^1.99",
-        "karelwintersky/arris.entity": "^0.99",
+        "karelwintersky/arris.entity": "^0.100",
         "curl/curl": "^2.5"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8 || ^5.7 || ^6.5"
+        "phpunit/phpunit": "^8"
     }
 }

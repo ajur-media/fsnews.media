@@ -277,12 +277,15 @@ class Media implements MediaInterface
             return [];
         }
 
+        if (empty($row['type'])) {
+            return [];
+        }
+
         if (empty($domain_prefix)) {
             $domain_prefix = self::$options['domain.storage.default'];
         }
-        $type = $row['type'];
 
-        $path = self::getRelativeResourcePath($type, $row['cdate']);
+        $path = self::getRelativeResourcePath($row['type'], $row['cdate'] ?? 'now');
         if ($prepend_domain === true) {
             $path = $domain_prefix . $path;
         }
