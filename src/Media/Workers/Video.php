@@ -210,7 +210,7 @@ class Video
      * @param $fn_source
      * @return array
      */
-    private function getVideoInfo($fn_source)
+    public function getVideoInfo($fn_source): array
     {
         $ffprobe = $this->options['exec.ffprobe'];
 

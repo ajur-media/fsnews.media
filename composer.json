@@ -23,7 +23,7 @@
         "karelwintersky/arris": "^2",
         "karelwintersky/arris.toolkit.mimetypes": "^1.99",
         "ajur-media/php_gdwrapper": "^1.99",
-        "karelwintersky/arris.entity": "^0.100",
+        "karelwintersky/arris.entity": "^1",
         "curl/curl": "^2.5"
     },
     "require-dev": {
