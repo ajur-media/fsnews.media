@@ -138,12 +138,12 @@ class Video
 
 
     /**
-     * Генерирует превью для видео
+     * Генерирует картинку из видео по временнОй метке.
      *
      * @param string $source    - исходное видео, имя файла с путём
      * @param string $target    - сгенерированное имя файда с путём для превью
      * @param float $timestamp  - деление на 2 делается вне функции
-     * @param array $sizes      - параметры
+     * @param array $sizes      - параметры ['maxWidth' => maxWidth, 'maxHeight' => maxHeight]
      * @param LoggerInterface $logger
      * @return Result
      */
@@ -156,25 +156,25 @@ class Video
 
         $logger->debug("[VIDEO] Таймштамп для превью:", [ $tn_timestamp ]);
 
-        $w = $sizes['maxWidth'] ?? 1;
-        $h = $sizes['maxHeight'] ?? 1;
+        $w = $sizes['maxWidth'] ?? $sizes[0] ?? 100;
+        $h = $sizes['maxHeight'] ?? $sizes[1] ?? 100;
 
         $vfscale = "-vf \"scale=iw*min({$w}/iw\,{$h}/ih):ih*min({$w}/iw\,{$h}/ih), pad={$w}:{$h}:({$w}-iw*min({$w}/iw\,{$h}/ih))/2:({$h}-ih*min({$w}/iw\,{$h}/ih))/2\" ";
 
         $cmd = [
-            'bin'       =>  Media::$options['exec.ffmpeg'],
+            'bin'       =>  $this->options['exec.ffmpeg'],
                             '-hide_banner',
                             '-y',
             'ss'        =>  "-ss {$tn_timestamp}",
-            'accurate'  =>  Media::$options['no_accurate_seek'] ? "-noaccurate_seek" : ' ',
+            'accurate'  =>  $this->options['no_accurate_seek'] ? "-noaccurate_seek" : ' ',
             'source'    =>  "-i {$source}",
                             "-an",
-            // 'ss'        =>  "-ss {$tn_timestamp}",
                             "-r 1",
                             "-vframes 1",
             'sizes'     =>  "-s {$w}x{$h}",
             'scale'     =>  $vfscale,
             'imagetype' =>  "-f mjpeg",
+            'quality'   =>  "-q:v 1",
             'target'    =>  $target,
             'verbose'   =>  '2>/dev/null 1>/dev/null'
         ];

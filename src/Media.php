@@ -64,7 +64,7 @@ class Media implements MediaInterface
         self::$options['exec.ffmpeg'] = $options['exec.ffmpeg'] ?? 'ffmpeg';
         self::$options['domain.storage.default'] = $options['domain.storage.default'] ?? ''; //@required
 
-        self::$options['no_accurate_seek'] = $options['no_accurate_seek'] ?? false;
+        self::$options['no_accurate_seek'] = $options['no_accurate_seek'] ?: false;
 
         self::$logger = is_null($logger) ? new NullLogger() : $logger;
     }
