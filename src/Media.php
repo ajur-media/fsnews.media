@@ -263,6 +263,8 @@ class Media implements MediaInterface
      * @param bool $prepend_domain - Добавлять ли домен перед путём к ресурсу (FALSE)
      * @param bool $target_is_mobile - Просматривают ли ресурс с мобильного устройства (FALSE) - замена строки `LegacyTemplate::$use_mobile_template` или `$CONFIG['AREA'] === "m"`
      * @param string $domain_prefix - Подставляемый домен (передается через $options['domain.storage']), `config('domains.storage.default')` или `global $CONFIG['domains']['storage']['default']`
+     * @param bool $path_have_trailing_separator -- subpath заканчивается на слэш...
+     * @todo: (по умолчанию - да, но это надо менять глобально. Для FSNews V2 тут должно быть false
      *
      * @return array
      */
@@ -271,7 +273,9 @@ class Media implements MediaInterface
         bool $is_report = false,
         bool $prepend_domain = false,
         bool $target_is_mobile = false,
-        string $domain_prefix = ''):array
+        string $domain_prefix = '',
+        bool $path_have_trailing_separator = true
+    ):array
     {
         if (empty($row)) {
             return [];
@@ -285,7 +289,12 @@ class Media implements MediaInterface
             $domain_prefix = self::$options['domain.storage.default'];
         }
 
-        $path = self::getRelativeResourcePath($row['type'], $row['cdate'] ?? 'now');
+        $path = self::getRelativeResourcePath(
+            $row['type'],
+                $row['cdate'] ?? 'now',
+            true,
+            $path_have_trailing_separator
+        );
         if ($prepend_domain === true) {
             $path = $domain_prefix . $path;
         }

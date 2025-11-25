@@ -49,7 +49,7 @@ trait ContentDirs
      * @param bool $stringify_path
      * @return Path|string
      */
-    public static function getAbsoluteResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true)
+    public static function getAbsoluteResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true)
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 
@@ -59,7 +59,7 @@ trait ContentDirs
             ->join( date('m', $creation_date) )
             ->setOptions(['isAbsolute'=>true]);
 
-        return $stringify_path ? $path->toString(true) : $path;
+        return $stringify_path ? $path->toString($has_trailing_separator) : $path;
     }
 
 
@@ -73,9 +73,10 @@ trait ContentDirs
      * @param string $type
      * @param string $creation_date
      * @param bool $stringify_path
+     * @param bool $has_trailing_separator
      * @return Path|string
      */
-    public static function getRelativeResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true)
+    public static function getRelativeResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true)
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 
@@ -83,7 +84,7 @@ trait ContentDirs
             ->join( date('Y', $creation_date) )
             ->join( date('m', $creation_date) );
 
-        return $stringify_path ? $path->toString(true) : $path;
+        return $stringify_path ? $path->toString($has_trailing_separator) : $path;
     }
 
     /**
