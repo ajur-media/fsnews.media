@@ -7,7 +7,7 @@ use AJUR\FSNews\Media\Constants\ConvertSizes;
 use AJUR\FSNews\Media\Helpers\MediaHelpers;
 use AJUR\FSNews\MediaException;
 use AJUR\FSNews\MediaInterface;
-use Arris\Path;
+use Arris\Entity\Path;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Arris\Entity\Result;

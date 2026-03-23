@@ -2,7 +2,9 @@
 
 namespace AJUR\FSNews\Media\Workers;
 
-use AJUR\FSNews\Media;
+use AJUR\FSNews\Media\Constants\ContentDirs;
+use AJUR\FSNews\Media\Constants\ConvertSizes;
+use AJUR\FSNews\Media\Helpers\MediaHelpers;
 use AJUR\FSNews\MediaInterface;
 use AJUR\Wrappers\GDWrapper;
 use Arris\Entity\Result;
@@ -59,10 +61,10 @@ class RuTube
 
         $result->addMessage("Для загрузки передан корректный URL [{$url}]");
 
-        $storage_path = Media::getAbsoluteResourcePath('rutube');
-        Media::validatePath($storage_path);
+        $storage_path = ContentDirs::getAbsoluteResourcePath('rutube');
+        ContentDirs::validatePath($storage_path);
 
-        $target_filename = Media::generateNewFile($storage_path); //@todo: если мы решим добавлять суффикс к имени файла - то можно указать его при вызове
+        $target_filename = MediaHelpers::generateNewFile($storage_path); //@todo: если мы решим добавлять суффикс к имени файла - то можно указать его при вызове
         $target_file = "{$storage_path}/{$target_filename}";
 
         $result->addMessage("Сгенерировано новое уникальное имя файла: " . $target_file);
@@ -74,7 +76,7 @@ class RuTube
 
         $result->setData('thumbnails', []);
 
-        foreach (Media::$convert_sizes['rutube'] as $params) {
+        foreach (ConvertSizes::$convert_sizes['rutube'] as $params) {
             $prefix = $params['prefix'];
             GDWrapper::getFixedPicture($source_url, "{$storage_path}/{$prefix}{$target_filename}", $params['maxWidth'], $params['maxHeight'], $params['quality']);
             $this->logger->debug('Generating image', [$source_url, "{$storage_path}/{$prefix}{$target_filename}", $params['maxWidth'], $params['maxHeight'], $params['quality']]);

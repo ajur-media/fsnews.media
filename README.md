@@ -6,3 +6,4 @@ Version 0.15.0
 composer require ajur-media/fsnews.media
 ```
 
+"karelwintersky/arris": "^2",

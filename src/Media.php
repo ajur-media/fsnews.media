@@ -12,7 +12,7 @@ use AJUR\FSNews\Media\Workers\Audio;
 use AJUR\FSNews\Media\Workers\Photo;
 use AJUR\FSNews\Media\Workers\Video;
 use Arris\Entity\Result;
-use Arris\Path;
+use Arris\Entity\Path;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -20,8 +20,6 @@ use Psr\Log\NullLogger;
 
 class Media implements MediaInterface
 {
-    use ConvertSizes, ContentDirs, AllowedMimeTypes, MediaHelpers;
-
     /**
      * @var LoggerInterface
      */
@@ -31,6 +29,10 @@ class Media implements MediaInterface
      * @var array
      */
     public static array $options = [];
+
+    public static array $content_dirs = [];
+
+    public static array $allowed_mime_types = [];
 
     /**
      * @param array $options
@@ -54,7 +56,7 @@ class Media implements MediaInterface
         }
 
         if (!empty($additional_mime_types)) {
-            self::$allowed_mime_types = array_merge(self::$allowed_mime_types, $additional_mime_types);
+            self::$allowed_mime_types = array_merge(AllowedMimeTypes::$allowed_mime_types, $additional_mime_types);
             self::$allowed_mime_types = array_unique(self::$allowed_mime_types);
         }
 
@@ -64,7 +66,7 @@ class Media implements MediaInterface
         self::$options['exec.ffmpeg'] = $options['exec.ffmpeg'] ?? 'ffmpeg';
         self::$options['domain.storage.default'] = $options['domain.storage.default'] ?? ''; //@required
 
-        self::$options['no_accurate_seek'] = $options['no_accurate_seek'] ?: false;
+        self::$options['no_accurate_seek'] = $options['no_accurate_seek'] ?? false;
 
         self::$logger = is_null($logger) ? new NullLogger() : $logger;
     }
@@ -229,7 +231,7 @@ class Media implements MediaInterface
 
         $r = new Result();
 
-        $path = self::getAbsoluteResourcePath('titles', $cdate, false);
+        $path = ContentDirs::getAbsoluteResourcePath('titles', $cdate, false);
 
         $prefixes = array_map(static function($v) {
             return $v['prefix'];
@@ -289,7 +291,7 @@ class Media implements MediaInterface
             $domain_prefix = self::$options['domain.storage.default'];
         }
 
-        $path = self::getRelativeResourcePath(
+        $path = ContentDirs::getRelativeResourcePath(
             $row['type'],
                 $row['cdate'] ?? 'now',
             true,

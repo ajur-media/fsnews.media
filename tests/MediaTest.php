@@ -1,6 +1,8 @@
 <?php
 
 use AJUR\FSNews\Media;
+use AJUR\FSNews\Media\Constants\ContentDirs;
+use AJUR\FSNews\Media\Helpers\MediaHelpers;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,7 +26,7 @@ class MediaTest extends TestCase
      */
     public function testGetAbsoluteResourcePath()
     {
-        $this->assertEquals( '/srv/storage/videos/2023/05/', Media::getAbsoluteResourcePath('videos', '2023-05-05 17:11:44') );
+        $this->assertEquals( '/srv/storage/videos/2023/05/', ContentDirs::getAbsoluteResourcePath('videos', '2023-05-05 17:11:44') );
     }
 
     /**
@@ -33,7 +35,7 @@ class MediaTest extends TestCase
      */
     public function testGetRelativeResourcePath()
     {
-        $this->assertEquals('/videos/2023/05/', Media::getRelativeResourcePath('videos', '2023-05-05 17:17:44'));
+        $this->assertEquals('/videos/2023/05/', ContentDirs::getRelativeResourcePath('videos', '2023-05-05 17:17:44'));
     }
 
     /**
@@ -42,7 +44,7 @@ class MediaTest extends TestCase
      */
     public function testDeserialize1()
     {
-        $this->assertEquals(['a' => 1 ], Media\Helpers\MediaHelpers::deserialize('{"a": 1}', []));
+        $this->assertEquals(['a' => 1 ], MediaHelpers::deserialize('{"a": 1}', []));
     }
 
 }

@@ -4,7 +4,7 @@ namespace AJUR\FSNews\Media\Constants;
 
 use Arris\Core\Dot;
 
-trait ConvertSizes
+class ConvertSizes
 {
     /**
      * Все возможные размеры превьюшек/картинок ко всем типам медиа - с размерами, функцией-обработчиком, файлом вотермарки, отступом вотермарки

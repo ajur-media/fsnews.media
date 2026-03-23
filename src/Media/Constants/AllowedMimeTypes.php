@@ -2,7 +2,7 @@
 
 namespace AJUR\FSNews\Media\Constants;
 
-trait AllowedMimeTypes
+class AllowedMimeTypes
 {
     /**
      * Доступные для аплоада майм-типы

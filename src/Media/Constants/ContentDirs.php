@@ -6,7 +6,7 @@ use AJUR\FSNews\Media;
 use Arris\Path;
 use RuntimeException;
 
-trait ContentDirs
+class ContentDirs
 {
     /**
      * @var int Маска прав доступа по-умолчанию
@@ -47,6 +47,8 @@ trait ContentDirs
      * @param string $type
      * @param string $creation_date
      * @param bool $stringify_path
+     * @param bool $has_trailing_separator
+     *
      * @return Path|string
      */
     public static function getAbsoluteResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true)

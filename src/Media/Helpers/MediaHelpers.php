@@ -3,6 +3,7 @@
 namespace AJUR\FSNews\Media\Helpers;
 
 use AJUR\FSNews\Media;
+use AJUR\FSNews\Media\Constants\ContentDirs;
 use AJUR\FSNews\MediaInterface;
 use AJUR\Wrappers\GDWrapper;
 use Arris\Entity\Result;
@@ -10,7 +11,7 @@ use Arris\Toolkit\MimeTypes;
 use Exception;
 use Psr\Log\NullLogger;
 
-trait MediaHelpers
+class MediaHelpers
 {
     /**
      * Возвращает абсолютный URL к ресурсу
@@ -75,7 +76,7 @@ trait MediaHelpers
      */
     public static function generateNewFile($path, int $length = 20, string $extension = '.jpg', string $suffix = ''): string
     {
-        self::validatePath($path); // проверяем существование пути и создаем при необходимости
+        ContentDirs::validatePath($path); // проверяем существование пути и создаем при необходимости
         do {
             $new_filename = self::getRandomFilename( $length, $suffix ) . $extension;
         } while (is_file( "{$path}/{$new_filename}" ));
@@ -95,7 +96,7 @@ trait MediaHelpers
             return false;
         }
 
-        $logger = $logger ?? self::$logger ?? new NullLogger();
+        $logger = $logger ?? new NullLogger();
 
         $logger->debug("[VIDEO] Генерируем превью {$params['prefix']} ({$target}) на основе {$source}", [ $params ]);
 
@@ -138,7 +139,7 @@ trait MediaHelpers
      * @param string $filepath
      * @return string
      */
-    public static function getMimeType(string $filepath)
+    public static function getMimeType(string $filepath): string
     {
         return mime_content_type($filepath);
     }
