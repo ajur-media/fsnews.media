@@ -21,7 +21,7 @@
         "ext-curl": "*",
         "psr/log": "*",
         "karelwintersky/arris.toolkit.mimetypes": "^1.99",
-        "ajur-media/php_gdwrapper": "^1.99",
+        "ajur-media/php_gdwrapper": "^1.100",
         "karelwintersky/arris.entity": "^1",
         "curl/curl": "^2.5",
         "karelwintersky/arris.entity.path": "^0.99.0"
