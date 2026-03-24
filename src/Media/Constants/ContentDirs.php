@@ -3,7 +3,7 @@
 namespace AJUR\FSNews\Media\Constants;
 
 use AJUR\FSNews\Media;
-use Arris\Path;
+use Arris\Entity\Path;
 use RuntimeException;
 
 class ContentDirs
@@ -51,7 +51,7 @@ class ContentDirs
      *
      * @return Path|string
      */
-    public static function getAbsoluteResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true)
+    public static function getAbsoluteResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true): string|Path
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 
@@ -78,7 +78,7 @@ class ContentDirs
      * @param bool $has_trailing_separator
      * @return Path|string
      */
-    public static function getRelativeResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true)
+    public static function getRelativeResourcePath(string $type = 'photos', string $creation_date = 'now', bool $stringify_path = true, bool $has_trailing_separator = true): string|Path
     {
         $creation_date = $creation_date == 'now' ? time() : strtotime($creation_date);
 

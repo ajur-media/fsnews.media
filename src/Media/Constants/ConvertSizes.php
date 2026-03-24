@@ -2,7 +2,7 @@
 
 namespace AJUR\FSNews\Media\Constants;
 
-use Arris\Core\Dot;
+use Adbar\Dot;
 
 class ConvertSizes
 {

@@ -24,7 +24,8 @@
         "ajur-media/php_gdwrapper": "^1.100",
         "karelwintersky/arris.entity": "^1",
         "curl/curl": "^2.5",
-        "karelwintersky/arris.entity.path": "^0.99.0"
+        "karelwintersky/arris.entity.path": "^0.99.0",
+        "adbario/php-dot-notation": "^3.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^8"
